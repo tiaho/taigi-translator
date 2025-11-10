@@ -1,0 +1,23 @@
+services:
+  # Backend API
+  - type: web
+    name: taigi-backend
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn backend.app:app"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: ANTHROPIC_API_KEY
+        sync: false  # Set this in Render dashboard
+
+  # Frontend
+  - type: web
+    name: taigi-frontend
+    env: static
+    buildCommand: "npm install && npm run build"
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://taigi-backend.onrender.com/api/*
