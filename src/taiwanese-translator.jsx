@@ -37,7 +37,8 @@ export default function TaiwaneseTranslator() {
     try {
       console.log('Playing phrase audio:', phrase.tailo);
       // Use our backend proxy to avoid CORS issues
-      const audioUrl = `/api/audio?taibun=${encodeURIComponent(phrase.tailo)}`;
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const audioUrl = `${apiUrl}/api/audio?taibun=${encodeURIComponent(phrase.tailo)}`;
       console.log('Phrase audio URL:', audioUrl);
 
       // Fetch with timeout
@@ -117,8 +118,9 @@ export default function TaiwaneseTranslator() {
     setPronunciationGuide('');
 
     try {
-      // Use local Flask backend with TauPhahJi (proxied through Vite)
-      const response = await fetch("/api/romanize", {
+      // Use backend API - in production, VITE_API_URL should be set to backend URL
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${apiUrl}/api/romanize`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -292,7 +294,8 @@ export default function TaiwaneseTranslator() {
       console.log('Playing audio for romanization:', tailoText);
 
       // Use our backend proxy to avoid CORS issues
-      const audioUrl = `/api/audio?taibun=${encodeURIComponent(tailoText)}`;
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const audioUrl = `${apiUrl}/api/audio?taibun=${encodeURIComponent(tailoText)}`;
       console.log('Audio URL:', audioUrl);
 
       // Fetch the audio file with timeout
