@@ -72,9 +72,9 @@ else:
     anthropic_client = None
     print("WARNING: ANTHROPIC_API_KEY not set. English translation will not work.")
 
-def translate_english_to_mandarin(english_text):
+def translate_english_to_taiwanese_with_mandarin(english_text):
     """
-    Use Claude API to translate English to Mandarin (Han characters) with Pinyin
+    Use Claude API to translate English to both Mandarin and Taiwanese in one call
     """
     if not anthropic_client:
         raise Exception("Claude API key not configured. Please set ANTHROPIC_API_KEY in .env file")
@@ -85,36 +85,43 @@ def translate_english_to_mandarin(english_text):
             max_tokens=1000,
             messages=[{
                 "role": "user",
-                "content": f"""Translate the following English text to Mandarin Chinese using traditional Chinese characters (繁體中文).
+                "content": f"""Translate the following English text to both Mandarin Chinese and Taiwanese Hokkien (台語).
 
 Input text: "{english_text}"
 
 Provide the output in exactly this format:
-CHARACTERS: [traditional Chinese characters]
+MANDARIN: [traditional Chinese characters for Mandarin]
 PINYIN: [Hanyu Pinyin with tone marks]
+TAIWANESE: [traditional Chinese characters for Taiwanese]
 
 Example format:
-CHARACTERS: 你好
-PINYIN: nǐ hǎo"""
+MANDARIN: 你好
+PINYIN: nǐ hǎo
+TAIWANESE: 你好
+
+Important: Use traditional Chinese characters (繁體中文/漢字) for both translations."""
             }]
         )
 
         response_text = message.content[0].text.strip()
-        print(f"Mandarin response: {response_text}")
+        print(f"Translation response: {response_text}")
 
         # Parse the response
         lines = response_text.split('\n')
         mandarin_text = ""
         pinyin = ""
+        taiwanese_text = ""
 
         for line in lines:
-            if line.startswith('CHARACTERS:'):
-                mandarin_text = line.replace('CHARACTERS:', '').strip()
+            if line.startswith('MANDARIN:'):
+                mandarin_text = line.replace('MANDARIN:', '').strip()
             elif line.startswith('PINYIN:'):
                 pinyin = line.replace('PINYIN:', '').strip()
+            elif line.startswith('TAIWANESE:'):
+                taiwanese_text = line.replace('TAIWANESE:', '').strip()
 
-        print(f"Translated '{english_text}' to Mandarin '{mandarin_text}' with Pinyin '{pinyin}'")
-        return mandarin_text, pinyin
+        print(f"Translated '{english_text}' to Mandarin '{mandarin_text}' ({pinyin}) and Taiwanese '{taiwanese_text}'")
+        return mandarin_text, pinyin, taiwanese_text
 
     except Exception as e:
         print(f"Translation error: {e}")
@@ -245,14 +252,10 @@ def romanize():
         print(f"Processing text: {text}, source language: {source_language}")
 
         if source_language == 'english':
-            # English to Mandarin to Taiwanese: translate in two steps
-            print("Step 1: Translating English to Mandarin...")
-            mandarin_text, pinyin = translate_english_to_mandarin(text)
-            print(f"Mandarin translation: {mandarin_text} ({pinyin})")
-
-            print("Step 2: Translating Mandarin to Taiwanese...")
-            taiwanese_text = translate_mandarin_to_taiwanese(mandarin_text)
-            print(f"Taiwanese translation: {taiwanese_text}")
+            # English to Taiwanese (with Mandarin): translate in ONE optimized call
+            print("Translating English to Mandarin and Taiwanese...")
+            mandarin_text, pinyin, taiwanese_text = translate_english_to_taiwanese_with_mandarin(text)
+            print(f"Got Mandarin '{mandarin_text}' ({pinyin}) and Taiwanese '{taiwanese_text}'")
 
             # Use TauPhahJi to get romanization
             result = tàuphahjī(taiwanese_text)
@@ -269,7 +272,7 @@ def romanize():
                 'success': True,
                 'translation': taiwanese_text,
                 'mandarin': mandarin_text,
-                'pinyin': pinyin,  # Add Pinyin
+                'pinyin': pinyin,
                 'romanization': tailo_romanization,
                 'hanCharacters': han_characters,
                 'kip': kip_romanization
