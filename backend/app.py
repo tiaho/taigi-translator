@@ -197,9 +197,9 @@ def convert_kip_to_tailo(kip_text):
     # A more complete conversion would handle specific differences
     return kip_text
 
-def get_pinyin_for_mandarin(mandarin_text):
+def translate_mandarin_to_taiwanese_with_pinyin(mandarin_text):
     """
-    Use Claude API to get Pinyin for Mandarin text
+    Use Claude API to translate Mandarin to Taiwanese and get Pinyin in one call
     """
     if not anthropic_client:
         raise Exception("Claude API key not configured. Please set ANTHROPIC_API_KEY in .env file")
@@ -210,24 +210,39 @@ def get_pinyin_for_mandarin(mandarin_text):
             max_tokens=1000,
             messages=[{
                 "role": "user",
-                "content": f"""Provide the Hanyu Pinyin romanization with tone marks for the following Mandarin Chinese text.
+                "content": f"""Given this Mandarin Chinese text, provide both the Hanyu Pinyin and the Taiwanese Hokkien (台語) translation.
 
 Input text: "{mandarin_text}"
 
-Provide ONLY the Pinyin romanization with tone marks, with no explanations or additional text. Just the Pinyin.
+Provide the output in exactly this format:
+PINYIN: [Hanyu Pinyin with tone marks]
+TAIWANESE: [traditional Chinese characters for Taiwanese]
 
 Example:
-Input: 你好
-Output: nǐ hǎo"""
+PINYIN: nǐ hǎo
+TAIWANESE: 你好"""
             }]
         )
 
-        pinyin = message.content[0].text.strip()
-        print(f"Got Pinyin '{pinyin}' for Mandarin '{mandarin_text}'")
-        return pinyin
+        response_text = message.content[0].text.strip()
+        print(f"Mandarin to Taiwanese response: {response_text}")
+
+        # Parse the response
+        lines = response_text.split('\n')
+        pinyin = ""
+        taiwanese_text = ""
+
+        for line in lines:
+            if line.startswith('PINYIN:'):
+                pinyin = line.replace('PINYIN:', '').strip()
+            elif line.startswith('TAIWANESE:'):
+                taiwanese_text = line.replace('TAIWANESE:', '').strip()
+
+        print(f"Got Pinyin '{pinyin}' and Taiwanese '{taiwanese_text}' for Mandarin '{mandarin_text}'")
+        return pinyin, taiwanese_text
 
     except Exception as e:
-        print(f"Pinyin generation error: {e}")
+        print(f"Translation error: {e}")
         raise
 
 @app.route('/api/romanize', methods=['POST'])
@@ -278,14 +293,10 @@ def romanize():
                 'kip': kip_romanization
             }
         elif source_language == 'mandarin':
-            # Mandarin to Taiwanese: get Pinyin and translate
-            print("Step 1: Getting Pinyin for Mandarin...")
-            pinyin = get_pinyin_for_mandarin(text)
-            print(f"Pinyin: {pinyin}")
-
-            print("Step 2: Translating Mandarin to Taiwanese...")
-            taiwanese_text = translate_mandarin_to_taiwanese(text)
-            print(f"Taiwanese translation: {taiwanese_text}")
+            # Mandarin to Taiwanese: get Pinyin and translation in ONE optimized call
+            print("Translating Mandarin to Taiwanese with Pinyin...")
+            pinyin, taiwanese_text = translate_mandarin_to_taiwanese_with_pinyin(text)
+            print(f"Got Pinyin '{pinyin}' and Taiwanese '{taiwanese_text}'")
 
             # Use TauPhahJi to get romanization
             result = tàuphahjī(taiwanese_text)
@@ -301,7 +312,7 @@ def romanize():
             response_data = {
                 'success': True,
                 'translation': taiwanese_text,
-                'pinyin': pinyin,  # Add Pinyin for Mandarin input
+                'pinyin': pinyin,
                 'romanization': tailo_romanization,
                 'hanCharacters': han_characters,
                 'kip': kip_romanization

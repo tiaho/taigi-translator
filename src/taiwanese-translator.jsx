@@ -15,6 +15,34 @@ export default function TaiwaneseTranslator() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [audioError, setAudioError] = useState('');
   const audioRef = React.useRef(null);
+  const debounceTimerRef = React.useRef(null);
+
+  // Cache key generator
+  const getCacheKey = (text, lang) => `translation_${lang}_${text}`;
+
+  // Load from cache
+  const loadFromCache = (text, lang) => {
+    try {
+      const cacheKey = getCacheKey(text, lang);
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch (e) {
+      console.error('Cache read error:', e);
+    }
+    return null;
+  };
+
+  // Save to cache
+  const saveToCache = (text, lang, result) => {
+    try {
+      const cacheKey = getCacheKey(text, lang);
+      localStorage.setItem(cacheKey, JSON.stringify(result));
+    } catch (e) {
+      console.error('Cache write error:', e);
+    }
+  };
 
   const commonPhrases = [
     { en: 'Hello', taiwanese: 'Lí hó', han: '你好', tailo: 'Lí hó', pronunciation: 'LEE hoh' },
@@ -109,6 +137,11 @@ export default function TaiwaneseTranslator() {
   const translateText = async () => {
     if (!inputText.trim()) return;
 
+    // Clear any pending debounce
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
     setIsLoading(true);
     setTranslatedText('');
     setMandarinText('');
@@ -118,6 +151,20 @@ export default function TaiwaneseTranslator() {
     setPronunciationGuide('');
 
     try {
+      // Check cache first
+      const cached = loadFromCache(inputText.trim(), sourceLanguage);
+      if (cached) {
+        console.log('✨ Using cached translation');
+        // Restore from cache
+        if (cached.mandarin) setMandarinText(cached.mandarin);
+        if (cached.pinyin) setPinyin(cached.pinyin);
+        if (cached.translation) setTranslatedText(cached.translation);
+        if (cached.romanization) setRomanization(cached.romanization);
+        if (cached.hanCharacters) setHanCharacters(cached.hanCharacters);
+        setIsLoading(false);
+        return;
+      }
+
       // Use backend API - in production, VITE_API_URL should be set to backend URL
       const apiUrl = import.meta.env.VITE_API_URL || '';
       const response = await fetch(`${apiUrl}/api/romanize`, {
@@ -174,12 +221,28 @@ export default function TaiwaneseTranslator() {
         setHanCharacters(result.hanCharacters || result.translation || '');
       }
 
+      // Save to cache
+      saveToCache(inputText.trim(), sourceLanguage, result);
+
     } catch (error) {
       console.error("Translation error:", error);
       setTranslatedText(`Error: ${error.message}. Make sure the backend server is running (python3 backend/app.py)`);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Debounced translate function to prevent double-clicks
+  const debouncedTranslate = () => {
+    // Clear any existing timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    // Set new timer
+    debounceTimerRef.current = setTimeout(() => {
+      translateText();
+    }, 300); // 300ms debounce delay
   };
 
   const speakText = async (text, isTaiwanese = false) => {
@@ -489,14 +552,14 @@ export default function TaiwaneseTranslator() {
                   className="w-full h-32 p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && e.ctrlKey) {
-                      translateText();
+                      debouncedTranslate();
                     }
                   }}
                 />
               </div>
 
               <button
-                onClick={translateText}
+                onClick={debouncedTranslate}
                 disabled={isLoading || !inputText.trim()}
                 className="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 text-sm"
               >
@@ -595,7 +658,12 @@ export default function TaiwaneseTranslator() {
               <div className="p-6 bg-amber-50">
                 <h3 className="text-sm font-medium text-amber-700 mb-2">Mandarin (中文)</h3>
                 <div className="h-32 mb-4 p-3 bg-white border border-amber-300 rounded-lg overflow-y-auto">
-                  {mandarinText ? (
+                  {isLoading ? (
+                    <div className="space-y-3 animate-pulse">
+                      <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                      <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                    </div>
+                  ) : mandarinText ? (
                     <div className="space-y-1">
                       <p className="text-base text-gray-800 font-serif">{mandarinText}</p>
                       {pinyin && (
@@ -632,7 +700,13 @@ export default function TaiwaneseTranslator() {
                 {sourceLanguage === 'taiwanese' ? 'English Output' : 'Taiwanese (台語)'}
               </h3>
               <div className="h-32 mb-4 p-3 bg-white border border-indigo-300 rounded-lg overflow-y-auto">
-                {translatedText ? (
+                {isLoading ? (
+                  <div className="space-y-3 animate-pulse">
+                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                    <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                  </div>
+                ) : translatedText ? (
                   <div className="space-y-1">
                     {hanCharacters && (sourceLanguage === 'english' || sourceLanguage === 'mandarin') && (
                       <p className="text-lg text-indigo-600 font-serif">{hanCharacters}</p>
