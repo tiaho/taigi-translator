@@ -165,9 +165,9 @@ export default function TaiwaneseTranslator() {
         return;
       }
 
-      // Use backend API - in production, VITE_API_URL should be set to backend URL
+      // Use streaming API for real-time translation
       const apiUrl = import.meta.env.VITE_API_URL || '';
-      const response = await fetch(`${apiUrl}/api/romanize`, {
+      const response = await fetch(`${apiUrl}/api/romanize/stream`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -179,50 +179,85 @@ export default function TaiwaneseTranslator() {
       });
 
       if (!response.ok) {
-        let errorMessage = `Request failed: ${response.status}`;
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch (e) {
-          // Couldn't parse error response
+        throw new Error(`Request failed: ${response.status}`);
+      }
+
+      // Handle streaming response
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+
+        // Keep the last incomplete line in the buffer
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+
+              if (data.error) {
+                throw new Error(data.error);
+              }
+
+              // Update UI with streaming partial results
+              if (data.status === 'streaming' && data.partial) {
+                // Parse partial results and show them
+                const partial = data.partial;
+                const lines = partial.split('\n');
+
+                for (const line of lines) {
+                  if (line.startsWith('MANDARIN:')) {
+                    setMandarinText(line.replace('MANDARIN:', '').trim());
+                  } else if (line.startsWith('PINYIN:')) {
+                    setPinyin(line.replace('PINYIN:', '').trim());
+                  } else if (line.startsWith('TAIWANESE:')) {
+                    setTranslatedText(line.replace('TAIWANESE:', '').trim());
+                  } else if (sourceLanguage === 'taiwanese') {
+                    // For Taiwanese to English, show partial English
+                    setTranslatedText(partial.trim());
+                  }
+                }
+              }
+
+              // Handle complete result
+              if (data.status === 'complete') {
+                if (sourceLanguage === 'taiwanese') {
+                  setTranslatedText(data.translation || '');
+                  setRomanization(data.romanization || '');
+                  setHanCharacters(data.hanCharacters || inputText);
+                  setMandarinText('');
+                  setPinyin('');
+                } else if (sourceLanguage === 'mandarin') {
+                  setPinyin(data.pinyin || '');
+                  setTranslatedText(data.translation || '');
+                  setRomanization(data.romanization || '');
+                  setHanCharacters(data.hanCharacters || data.translation || '');
+                  setMandarinText('');
+                } else {
+                  setMandarinText(data.mandarin || '');
+                  setPinyin(data.pinyin || '');
+                  setTranslatedText(data.translation || '');
+                  setRomanization(data.romanization || '');
+                  setHanCharacters(data.hanCharacters || data.translation || '');
+                }
+
+                // Save to cache
+                saveToCache(inputText.trim(), sourceLanguage, data);
+              }
+            } catch (e) {
+              console.error('Error parsing SSE data:', e);
+            }
+          }
         }
-        throw new Error(errorMessage);
       }
-
-      const contentType = response.headers.get("content-type");
-      if (!contentType || !contentType.includes("application/json")) {
-        const text = await response.text();
-        throw new Error(`Expected JSON response but got: ${text.substring(0, 100)}`);
-      }
-
-      const result = await response.json();
-      console.log('Backend response:', result);
-
-      if (sourceLanguage === 'taiwanese') {
-        // Taiwanese to English - show English translation and Taiwanese romanization
-        setTranslatedText(result.translation || ''); // English translation
-        setRomanization(result.romanization || ''); // Taiwanese romanization
-        setHanCharacters(result.hanCharacters || inputText); // Original Taiwanese
-        setMandarinText(''); // No Mandarin for this direction
-        setPinyin(''); // No Pinyin for this direction
-      } else if (sourceLanguage === 'mandarin') {
-        // Mandarin to Taiwanese - show Pinyin and Taiwanese output
-        setPinyin(result.pinyin || ''); // Pinyin for Mandarin input
-        setTranslatedText(result.translation || ''); // Taiwanese translation
-        setRomanization(result.romanization || ''); // Taiwanese romanization
-        setHanCharacters(result.hanCharacters || result.translation || '');
-        setMandarinText(''); // No intermediate Mandarin column
-      } else {
-        // English to Mandarin to Taiwanese - show all three steps
-        setMandarinText(result.mandarin || ''); // Mandarin intermediate step
-        setPinyin(result.pinyin || ''); // Pinyin romanization
-        setTranslatedText(result.translation || ''); // Taiwanese translation
-        setRomanization(result.romanization || ''); // Taiwanese romanization
-        setHanCharacters(result.hanCharacters || result.translation || '');
-      }
-
-      // Save to cache
-      saveToCache(inputText.trim(), sourceLanguage, result);
 
     } catch (error) {
       console.error("Translation error:", error);

@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, Response, stream_with_context
 from flask_cors import CORS
 from tauphahji_cmd import tàuphahjī
 from anthropic import Anthropic
@@ -81,7 +81,7 @@ def translate_english_to_taiwanese_with_mandarin(english_text):
 
     try:
         message = anthropic_client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model="claude-3-5-haiku-20241022",
             max_tokens=1000,
             messages=[{
                 "role": "user",
@@ -136,7 +136,7 @@ def translate_mandarin_to_taiwanese(mandarin_text):
 
     try:
         message = anthropic_client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model="claude-3-5-haiku-20241022",
             max_tokens=1000,
             messages=[{
                 "role": "user",
@@ -165,7 +165,7 @@ def translate_taiwanese_to_english(taiwanese_text):
 
     try:
         message = anthropic_client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model="claude-3-5-haiku-20241022",
             max_tokens=1000,
             messages=[{
                 "role": "user",
@@ -206,7 +206,7 @@ def translate_mandarin_to_taiwanese_with_pinyin(mandarin_text):
 
     try:
         message = anthropic_client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model="claude-3-5-haiku-20241022",
             max_tokens=1000,
             messages=[{
                 "role": "user",
@@ -350,6 +350,191 @@ def romanize():
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/romanize/stream', methods=['POST'])
+def romanize_stream():
+    """
+    Streaming version of romanize endpoint using Server-Sent Events
+    """
+    def generate():
+        try:
+            data = request.json
+            text = data.get('text', '')
+            source_language = data.get('sourceLanguage', 'taiwanese')
+
+            if not text:
+                yield f"data: {json.dumps({'error': 'No text provided'})}\n\n"
+                return
+
+            # Send initial status
+            yield f"data: {json.dumps({'status': 'translating', 'stage': 'started'})}\n\n"
+
+            if source_language == 'english':
+                # English to Taiwanese with streaming
+                yield f"data: {json.dumps({'status': 'translating', 'stage': 'mandarin'})}\n\n"
+
+                # Stream the translation
+                mandarin_text = ""
+                pinyin = ""
+                taiwanese_text = ""
+
+                with anthropic_client.messages.stream(
+                    model="claude-3-5-haiku-20241022",
+                    max_tokens=1000,
+                    messages=[{
+                        "role": "user",
+                        "content": f"""Translate the following English text to both Mandarin Chinese and Taiwanese Hokkien (台語).
+
+Input text: "{text}"
+
+Provide the output in exactly this format:
+MANDARIN: [traditional Chinese characters for Mandarin]
+PINYIN: [Hanyu Pinyin with tone marks]
+TAIWANESE: [traditional Chinese characters for Taiwanese]
+
+Example format:
+MANDARIN: 你好
+PINYIN: nǐ hǎo
+TAIWANESE: 你好
+
+Important: Use traditional Chinese characters (繁體中文/漢字) for both translations."""
+                    }]
+                ) as stream:
+                    response_text = ""
+                    for text_chunk in stream.text_stream:
+                        response_text += text_chunk
+                        # Send partial update
+                        yield f"data: {json.dumps({'status': 'streaming', 'partial': response_text})}\n\n"
+
+                # Parse the complete response
+                lines = response_text.split('\n')
+                for line in lines:
+                    if line.startswith('MANDARIN:'):
+                        mandarin_text = line.replace('MANDARIN:', '').strip()
+                    elif line.startswith('PINYIN:'):
+                        pinyin = line.replace('PINYIN:', '').strip()
+                    elif line.startswith('TAIWANESE:'):
+                        taiwanese_text = line.replace('TAIWANESE:', '').strip()
+
+                # Get romanization
+                result = tàuphahjī(taiwanese_text)
+                kip_romanization = result.get('KIP', '')
+                han_characters = result.get('漢字', '')
+                tailo_romanization = convert_kip_to_tailo(kip_romanization)
+
+                # Send final result
+                final_data = {
+                    'status': 'complete',
+                    'success': True,
+                    'translation': taiwanese_text,
+                    'mandarin': mandarin_text,
+                    'pinyin': pinyin,
+                    'romanization': tailo_romanization,
+                    'hanCharacters': han_characters,
+                    'kip': kip_romanization
+                }
+                yield f"data: {json.dumps(final_data)}\n\n"
+
+            elif source_language == 'mandarin':
+                # Mandarin to Taiwanese with streaming
+                yield f"data: {json.dumps({'status': 'translating', 'stage': 'taiwanese'})}\n\n"
+
+                pinyin = ""
+                taiwanese_text = ""
+
+                with anthropic_client.messages.stream(
+                    model="claude-3-5-haiku-20241022",
+                    max_tokens=1000,
+                    messages=[{
+                        "role": "user",
+                        "content": f"""Given this Mandarin Chinese text, provide both the Hanyu Pinyin and the Taiwanese Hokkien (台語) translation.
+
+Input text: "{text}"
+
+Provide the output in exactly this format:
+PINYIN: [Hanyu Pinyin with tone marks]
+TAIWANESE: [traditional Chinese characters for Taiwanese]
+
+Example:
+PINYIN: nǐ hǎo
+TAIWANESE: 你好"""
+                    }]
+                ) as stream:
+                    response_text = ""
+                    for text_chunk in stream.text_stream:
+                        response_text += text_chunk
+                        yield f"data: {json.dumps({'status': 'streaming', 'partial': response_text})}\n\n"
+
+                # Parse response
+                lines = response_text.split('\n')
+                for line in lines:
+                    if line.startswith('PINYIN:'):
+                        pinyin = line.replace('PINYIN:', '').strip()
+                    elif line.startswith('TAIWANESE:'):
+                        taiwanese_text = line.replace('TAIWANESE:', '').strip()
+
+                # Get romanization
+                result = tàuphahjī(taiwanese_text)
+                kip_romanization = result.get('KIP', '')
+                han_characters = result.get('漢字', '')
+                tailo_romanization = convert_kip_to_tailo(kip_romanization)
+
+                final_data = {
+                    'status': 'complete',
+                    'success': True,
+                    'translation': taiwanese_text,
+                    'pinyin': pinyin,
+                    'romanization': tailo_romanization,
+                    'hanCharacters': han_characters,
+                    'kip': kip_romanization
+                }
+                yield f"data: {json.dumps(final_data)}\n\n"
+
+            else:
+                # Taiwanese to English with streaming
+                yield f"data: {json.dumps({'status': 'translating', 'stage': 'english'})}\n\n"
+
+                english_text = ""
+
+                with anthropic_client.messages.stream(
+                    model="claude-3-5-haiku-20241022",
+                    max_tokens=1000,
+                    messages=[{
+                        "role": "user",
+                        "content": f"""Translate the following Taiwanese Hokkien (台語) text to English.
+
+The input is in traditional Chinese characters (漢字). Provide a natural English translation.
+
+Input text: "{text}"
+
+Provide ONLY the English translation, with no explanations or additional text. Just the translation."""
+                    }]
+                ) as stream:
+                    for text_chunk in stream.text_stream:
+                        english_text += text_chunk
+                        yield f"data: {json.dumps({'status': 'streaming', 'partial': english_text})}\n\n"
+
+                # Get romanization
+                result = tàuphahjī(text)
+                kip_romanization = result.get('KIP', '')
+                han_characters = result.get('漢字', '')
+                tailo_romanization = convert_kip_to_tailo(kip_romanization)
+
+                final_data = {
+                    'status': 'complete',
+                    'success': True,
+                    'translation': english_text.strip(),
+                    'romanization': tailo_romanization,
+                    'hanCharacters': han_characters,
+                    'kip': kip_romanization
+                }
+                yield f"data: {json.dumps(final_data)}\n\n"
+
+        except Exception as e:
+            print(f"Streaming error: {str(e)}")
+            yield f"data: {json.dumps({'error': str(e), 'status': 'error'})}\n\n"
+
+    return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
 @app.route('/api/translate', methods=['POST'])
 def translate():
