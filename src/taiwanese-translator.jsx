@@ -15,7 +15,16 @@ export default function TaiwaneseTranslator() {
   const [selectedVocabCategory, setSelectedVocabCategory] = useState('Numbers');
   const [customTopic, setCustomTopic] = useState('');
   const [isGeneratingVocab, setIsGeneratingVocab] = useState(false);
-  const [customVocabLists, setCustomVocabLists] = useState({});
+  const [customVocabLists, setCustomVocabLists] = useState(() => {
+    // Load custom vocab lists from localStorage on mount
+    try {
+      const saved = localStorage.getItem('customVocabLists');
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      console.error('Error loading custom vocab lists:', e);
+      return {};
+    }
+  });
   const [pronunciationGuide, setPronunciationGuide] = useState('');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [audioError, setAudioError] = useState('');
@@ -608,6 +617,26 @@ export default function TaiwaneseTranslator() {
     setShowVocab(false);
   };
 
+  const deleteCustomVocabList = (topicName) => {
+    const updatedLists = { ...customVocabLists };
+    delete updatedLists[topicName];
+
+    setCustomVocabLists(updatedLists);
+
+    // Save to localStorage
+    try {
+      localStorage.setItem('customVocabLists', JSON.stringify(updatedLists));
+      console.log('✅ Deleted vocab list from localStorage');
+    } catch (e) {
+      console.error('Error saving to localStorage:', e);
+    }
+
+    // Switch to default category if deleted current one
+    if (selectedVocabCategory === topicName) {
+      setSelectedVocabCategory('Numbers');
+    }
+  };
+
   const generateCustomVocab = async () => {
     if (!customTopic.trim()) return;
 
@@ -635,10 +664,20 @@ export default function TaiwaneseTranslator() {
       if (result.success && result.words && result.words.length > 0) {
         // Add to custom vocab lists with capitalized topic name
         const topicName = customTopic.trim().charAt(0).toUpperCase() + customTopic.trim().slice(1);
-        setCustomVocabLists(prev => ({
-          ...prev,
+        const updatedLists = {
+          ...customVocabLists,
           [topicName]: result.words
-        }));
+        };
+
+        setCustomVocabLists(updatedLists);
+
+        // Save to localStorage
+        try {
+          localStorage.setItem('customVocabLists', JSON.stringify(updatedLists));
+          console.log('✅ Saved custom vocab list to localStorage');
+        } catch (e) {
+          console.error('Error saving to localStorage:', e);
+        }
 
         // Switch to the new category
         setSelectedVocabCategory(topicName);
@@ -1051,19 +1090,41 @@ export default function TaiwaneseTranslator() {
 
               {/* Category Tabs */}
               <div className="flex flex-wrap gap-2 mb-4">
-                {Object.keys({...vocabularyLists, ...customVocabLists}).map((category) => (
-                  <button
-                    key={category}
-                    onClick={() => setSelectedVocabCategory(category)}
-                    className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
-                      selectedVocabCategory === category
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {category}
-                  </button>
-                ))}
+                {Object.keys({...vocabularyLists, ...customVocabLists}).map((category) => {
+                  const isCustom = category in customVocabLists;
+                  return (
+                    <div key={category} className="relative">
+                      <button
+                        onClick={() => setSelectedVocabCategory(category)}
+                        className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                          selectedVocabCategory === category
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        } ${isCustom ? 'pr-8' : ''}`}
+                      >
+                        {category}
+                      </button>
+                      {isCustom && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm(`Delete "${category}" vocab list?`)) {
+                              deleteCustomVocabList(category);
+                            }
+                          }}
+                          className={`absolute right-1 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full flex items-center justify-center text-xs transition-colors ${
+                            selectedVocabCategory === category
+                              ? 'text-white hover:bg-red-500'
+                              : 'text-gray-500 hover:bg-red-100 hover:text-red-600'
+                          }`}
+                          title="Delete this vocab list"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Vocabulary Words */}
