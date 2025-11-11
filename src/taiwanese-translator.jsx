@@ -13,6 +13,9 @@ export default function TaiwaneseTranslator() {
   const [showPhrases, setShowPhrases] = useState(false);
   const [showVocab, setShowVocab] = useState(false);
   const [selectedVocabCategory, setSelectedVocabCategory] = useState('Numbers');
+  const [customTopic, setCustomTopic] = useState('');
+  const [isGeneratingVocab, setIsGeneratingVocab] = useState(false);
+  const [customVocabLists, setCustomVocabLists] = useState({});
   const [pronunciationGuide, setPronunciationGuide] = useState('');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [audioError, setAudioError] = useState('');
@@ -605,6 +608,54 @@ export default function TaiwaneseTranslator() {
     setShowVocab(false);
   };
 
+  const generateCustomVocab = async () => {
+    if (!customTopic.trim()) return;
+
+    setIsGeneratingVocab(true);
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${apiUrl}/api/generate-vocab`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          topic: customTopic.trim()
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to generate vocabulary: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('Generated vocab:', result);
+
+      if (result.success && result.words && result.words.length > 0) {
+        // Add to custom vocab lists with capitalized topic name
+        const topicName = customTopic.trim().charAt(0).toUpperCase() + customTopic.trim().slice(1);
+        setCustomVocabLists(prev => ({
+          ...prev,
+          [topicName]: result.words
+        }));
+
+        // Switch to the new category
+        setSelectedVocabCategory(topicName);
+
+        // Clear input
+        setCustomTopic('');
+      } else {
+        alert('Failed to generate vocabulary. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error generating vocabulary:', error);
+      alert(`Error: ${error.message}`);
+    } finally {
+      setIsGeneratingVocab(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className="max-w-4xl mx-auto">
@@ -963,9 +1014,44 @@ export default function TaiwaneseTranslator() {
 
           {showVocab && (
             <div className="p-4 border-t">
+              {/* Custom Topic Generator */}
+              <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
+                <h3 className="text-sm font-semibold text-purple-800 mb-2">✨ Generate Custom Vocabulary</h3>
+                <p className="text-xs text-purple-600 mb-3">Enter any topic (e.g., "weather", "shopping", "emotions")</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={customTopic}
+                    onChange={(e) => setCustomTopic(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !isGeneratingVocab) {
+                        generateCustomVocab();
+                      }
+                    }}
+                    placeholder="Enter a topic..."
+                    className="flex-1 px-3 py-2 border border-purple-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    disabled={isGeneratingVocab}
+                  />
+                  <button
+                    onClick={generateCustomVocab}
+                    disabled={isGeneratingVocab || !customTopic.trim()}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium text-sm hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                  >
+                    {isGeneratingVocab ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      'Generate'
+                    )}
+                  </button>
+                </div>
+              </div>
+
               {/* Category Tabs */}
               <div className="flex flex-wrap gap-2 mb-4">
-                {Object.keys(vocabularyLists).map((category) => (
+                {Object.keys({...vocabularyLists, ...customVocabLists}).map((category) => (
                   <button
                     key={category}
                     onClick={() => setSelectedVocabCategory(category)}
@@ -982,7 +1068,7 @@ export default function TaiwaneseTranslator() {
 
               {/* Vocabulary Words */}
               <div className="grid md:grid-cols-2 gap-3">
-                {vocabularyLists[selectedVocabCategory].map((word, index) => (
+                {(vocabularyLists[selectedVocabCategory] || customVocabLists[selectedVocabCategory] || []).map((word, index) => (
                   <div
                     key={index}
                     className="p-3 bg-gray-50 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"

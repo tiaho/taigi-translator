@@ -619,6 +619,91 @@ def get_audio():
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/generate-vocab', methods=['POST'])
+def generate_vocab():
+    """
+    Generate a vocabulary list for a given topic using Claude API
+    """
+    try:
+        data = request.json
+        topic = data.get('topic', '')
+
+        if not topic:
+            return jsonify({'error': 'No topic provided'}), 400
+
+        if not anthropic_client:
+            return jsonify({'error': 'Claude API not configured'}), 500
+
+        print(f"Generating vocabulary for topic: {topic}")
+
+        message = anthropic_client.messages.create(
+            model="claude-3-5-haiku-20241022",
+            max_tokens=2000,
+            messages=[{
+                "role": "user",
+                "content": f"""Generate a vocabulary list for the topic "{topic}" with 8-12 relevant words.
+
+For each word, provide:
+- English word
+- Mandarin Chinese (traditional characters)
+- Taiwanese Hokkien (traditional characters)
+- Tâi-lô romanization
+
+Format each word exactly like this:
+WORD:
+EN: [English]
+ZH: [Mandarin traditional characters]
+TW: [Taiwanese traditional characters]
+TAILO: [Tâi-lô romanization]
+
+Example:
+WORD:
+EN: Rain
+ZH: 雨
+TW: 雨
+TAILO: Hōo
+
+Generate 8-12 words related to "{topic}". Start now:"""
+            }]
+        )
+
+        response_text = message.content[0].text.strip()
+        print(f"Claude response: {response_text}")
+
+        # Parse the response
+        words = []
+        current_word = {}
+
+        lines = response_text.split('\n')
+        for line in lines:
+            line = line.strip()
+            if line.startswith('EN:'):
+                current_word['en'] = line.replace('EN:', '').strip()
+            elif line.startswith('ZH:'):
+                current_word['mandarin'] = line.replace('ZH:', '').strip()
+            elif line.startswith('TW:'):
+                current_word['han'] = line.replace('TW:', '').strip()
+            elif line.startswith('TAILO:'):
+                current_word['tailo'] = line.replace('TAILO:', '').strip()
+                # Word is complete, add it to the list
+                if all(key in current_word for key in ['en', 'mandarin', 'han', 'tailo']):
+                    words.append(current_word.copy())
+                    current_word = {}
+
+        print(f"Generated {len(words)} words for topic: {topic}")
+
+        return jsonify({
+            'success': True,
+            'topic': topic,
+            'words': words
+        })
+
+    except Exception as e:
+        print(f"Error generating vocabulary: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/health', methods=['GET'])
 def health():
     return jsonify({'status': 'ok', 'message': 'Flask backend is running'})
