@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeftRight, Volume2, BookOpen, Loader2, Languages } from 'lucide-react';
+import { ArrowLeftRight, Volume2, BookOpen, Loader2, Languages, Library } from 'lucide-react';
 
 export default function TaiwaneseTranslator() {
   const [inputText, setInputText] = useState('');
@@ -11,6 +11,8 @@ export default function TaiwaneseTranslator() {
   const [sourceLanguage, setSourceLanguage] = useState('english');
   const [isLoading, setIsLoading] = useState(false);
   const [showPhrases, setShowPhrases] = useState(false);
+  const [showVocab, setShowVocab] = useState(false);
+  const [selectedVocabCategory, setSelectedVocabCategory] = useState('Numbers');
   const [pronunciationGuide, setPronunciationGuide] = useState('');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [audioError, setAudioError] = useState('');
@@ -57,6 +59,68 @@ export default function TaiwaneseTranslator() {
     { en: 'Good morning', taiwanese: 'Gâu-tsá', han: '早', tailo: 'Gâu-tsá', pronunciation: 'GOW-zah' },
     { en: 'Breakfast', taiwanese: 'Tsá-tǹg', han: '茶頓', tailo: 'Tsá-tǹg', pronunciation: 'ZAH-dng' }
   ];
+
+  const vocabularyLists = {
+    'Numbers': [
+      { en: 'One', mandarin: '一', han: '一', tailo: 'It' },
+      { en: 'Two', mandarin: '二', han: '二', tailo: 'Jī' },
+      { en: 'Three', mandarin: '三', han: '三', tailo: 'Sann' },
+      { en: 'Four', mandarin: '四', han: '四', tailo: 'Sì' },
+      { en: 'Five', mandarin: '五', han: '五', tailo: 'Gōo' },
+      { en: 'Six', mandarin: '六', han: '六', tailo: 'La̍k' },
+      { en: 'Seven', mandarin: '七', han: '七', tailo: 'Tshit' },
+      { en: 'Eight', mandarin: '八', han: '八', tailo: 'Peh' },
+      { en: 'Nine', mandarin: '九', han: '九', tailo: 'Káu' },
+      { en: 'Ten', mandarin: '十', han: '十', tailo: 'Tsa̍p' },
+    ],
+    'Colors': [
+      { en: 'Red', mandarin: '紅色', han: '紅色', tailo: 'Âng-sik' },
+      { en: 'Blue', mandarin: '藍色', han: '藍色', tailo: 'Nâ-sik' },
+      { en: 'Green', mandarin: '綠色', han: '青色', tailo: 'Tshenn-sik' },
+      { en: 'Yellow', mandarin: '黃色', han: '黃色', tailo: 'N̂g-sik' },
+      { en: 'White', mandarin: '白色', han: '白色', tailo: 'Pe̍h-sik' },
+      { en: 'Black', mandarin: '黑色', han: '烏色', tailo: 'Oo-sik' },
+    ],
+    'Food': [
+      { en: 'Rice', mandarin: '飯', han: '飯', tailo: 'Pn̄g' },
+      { en: 'Noodles', mandarin: '麵', han: '麵', tailo: 'Mī' },
+      { en: 'Water', mandarin: '水', han: '水', tailo: 'Tsuí' },
+      { en: 'Tea', mandarin: '茶', han: '茶', tailo: 'Tê' },
+      { en: 'Coffee', mandarin: '咖啡', han: '咖啡', tailo: 'Ka-pi' },
+      { en: 'Fruit', mandarin: '水果', han: '果子', tailo: 'Kué-tsí' },
+      { en: 'Meat', mandarin: '肉', han: '肉', tailo: 'Bah' },
+      { en: 'Fish', mandarin: '魚', han: '魚', tailo: 'Hî' },
+    ],
+    'Family': [
+      { en: 'Father', mandarin: '父親', han: '阿爸', tailo: 'A-pa' },
+      { en: 'Mother', mandarin: '母親', han: '阿母', tailo: 'A-bú' },
+      { en: 'Older brother', mandarin: '哥哥', han: '阿兄', tailo: 'A-hiann' },
+      { en: 'Older sister', mandarin: '姐姐', han: '阿姊', tailo: 'A-tsí' },
+      { en: 'Younger brother', mandarin: '弟弟', han: '小弟', tailo: 'Sió-tī' },
+      { en: 'Younger sister', mandarin: '妹妹', han: '小妹', tailo: 'Sió-muē' },
+      { en: 'Grandpa', mandarin: '爺爺', han: '阿公', tailo: 'A-kong' },
+      { en: 'Grandma', mandarin: '奶奶', han: '阿媽', tailo: 'A-má' },
+    ],
+    'Time': [
+      { en: 'Today', mandarin: '今天', han: '今仔日', tailo: 'Kin-á-ji̍t' },
+      { en: 'Yesterday', mandarin: '昨天', han: '昨日', tailo: 'Tsa-ji̍t' },
+      { en: 'Tomorrow', mandarin: '明天', han: '明仔日', tailo: 'Bîn-á-ji̍t' },
+      { en: 'Morning', mandarin: '早上', han: '早起', tailo: 'Tsá-khí' },
+      { en: 'Afternoon', mandarin: '下午', han: '下晡', tailo: 'Ē-poo' },
+      { en: 'Evening', mandarin: '晚上', han: '暗時', tailo: 'Àm-sî' },
+      { en: 'Night', mandarin: '夜晚', han: '暗頓', tailo: 'Àm-tǹg' },
+    ],
+    'Common Verbs': [
+      { en: 'Eat', mandarin: '吃', han: '食', tailo: 'Tsia̍h' },
+      { en: 'Drink', mandarin: '喝', han: '啉', tailo: 'Lim' },
+      { en: 'Go', mandarin: '去', han: '去', tailo: 'Khì' },
+      { en: 'Come', mandarin: '來', han: '來', tailo: 'Lâi' },
+      { en: 'See/Look', mandarin: '看', han: '看', tailo: 'Khuànn' },
+      { en: 'Listen', mandarin: '聽', han: '聽', tailo: 'Thiann' },
+      { en: 'Speak', mandarin: '說', han: '講', tailo: 'Kóng' },
+      { en: 'Sleep', mandarin: '睡', han: '睏', tailo: 'Khùn' },
+    ],
+  };
 
   const playPhraseAudio = async (phrase) => {
     setAudioError('');
@@ -519,6 +583,28 @@ export default function TaiwaneseTranslator() {
     setShowPhrases(false);
   };
 
+  const insertVocabWord = (word) => {
+    setMandarinText('');
+    setPinyin('');
+    if (sourceLanguage === 'english') {
+      setInputText(word.en);
+      setTranslatedText('');
+      setRomanization('');
+      setHanCharacters('');
+    } else if (sourceLanguage === 'mandarin') {
+      setInputText(word.mandarin);
+      setTranslatedText('');
+      setRomanization('');
+      setHanCharacters('');
+    } else {
+      setInputText(word.han);
+      setTranslatedText('');
+      setRomanization('');
+      setHanCharacters('');
+    }
+    setShowVocab(false);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className="max-w-4xl mx-auto">
@@ -858,6 +944,84 @@ export default function TaiwaneseTranslator() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+
+        {/* Vocabulary Lists Section */}
+        <div className="mt-6 bg-white rounded-lg shadow-md overflow-hidden">
+          <button
+            onClick={() => setShowVocab(!showVocab)}
+            className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <Library className="w-5 h-5 text-indigo-600" />
+              <span className="font-medium text-gray-800">Vocabulary Lists</span>
+            </div>
+            <span className="text-gray-400">{showVocab ? '−' : '+'}</span>
+          </button>
+
+          {showVocab && (
+            <div className="p-4 border-t">
+              {/* Category Tabs */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                {Object.keys(vocabularyLists).map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => setSelectedVocabCategory(category)}
+                    className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                      selectedVocabCategory === category
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+
+              {/* Vocabulary Words */}
+              <div className="grid md:grid-cols-2 gap-3">
+                {vocabularyLists[selectedVocabCategory].map((word, index) => (
+                  <div
+                    key={index}
+                    className="p-3 bg-gray-50 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
+                    onClick={() => insertVocabWord(word)}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-800">{word.en}</p>
+                        <div className="flex gap-3 mt-1">
+                          <div>
+                            <p className="text-xs text-gray-500">Mandarin</p>
+                            <p className="text-base text-amber-700">{word.mandarin}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">Taiwanese</p>
+                            <p className="text-base text-indigo-700">{word.han}</p>
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-600 mt-1">Tâi-lô: {word.tailo}</p>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          playPhraseAudio({ tailo: word.tailo });
+                        }}
+                        disabled={isSpeaking}
+                        className={`p-2 rounded-lg transition-colors ${
+                          isSpeaking
+                            ? 'bg-green-400 cursor-not-allowed'
+                            : 'bg-green-600 hover:bg-green-700'
+                        } text-white`}
+                        title="Play Taiwanese audio"
+                      >
+                        <Volume2 className={`w-3 h-3 ${isSpeaking ? 'animate-pulse' : ''}`} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
