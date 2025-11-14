@@ -870,12 +870,22 @@ export default function TaiwaneseTranslator() {
         audioRef.current.src = blobUrl;
         audioRef.current.load();
 
+        // Save original handlers
+        const originalOnEnded = audioRef.current.onended;
+        const originalOnError = audioRef.current.onerror;
+
+        // Set up temporary handlers for loading
         await new Promise((resolve, reject) => {
           audioRef.current.onloadeddata = resolve;
           audioRef.current.onerror = reject;
         });
 
+        // Restore original handlers before playing
+        audioRef.current.onended = originalOnEnded;
+        audioRef.current.onerror = originalOnError;
+
         await audioRef.current.play();
+        console.log('Flashcard audio playing successfully');
       }
     } catch (error) {
       console.error('Flashcard audio error:', error);
