@@ -5,9 +5,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 
 TaigiApp is a full-stack Taiwanese translator web application built with React and Flask. It provides:
-- English/Mandarin to Taiwanese translation (using Claude API with Taiwan-specific vocabulary)
+- **Dual Translation System**: English → BOTH Taiwan Mandarin (國語) AND Taiwanese (台語) using Claude API
+  - Taiwan Mandarin: 腳踏車, 很好, 吃飯 (Taiwan-specific vocabulary, not China Mandarin)
+  - Taiwanese: 跤踏車, 真好/誠好/足好, 食飯 (authentic Taiwanese vocabulary)
 - Taiwanese text to Tâi-lô romanization (using MOE Dictionary with TauPhahJi fallback)
 - Taiwan Ministry of Education Dictionary (16,579 entries: 14,489 titles + 4,329 synonyms)
+- Definition search: Finds Mandarin words (like 很) by searching dictionary definitions
 - Character variant normalization (Mandarin → Taiwanese: 腳 → 跤)
 - Authentic audio pronunciation (via Hapsing API with caching)
 - Pre-loaded common phrases with instant audio playback
@@ -24,8 +27,10 @@ TaigiApp is a full-stack Taiwanese translator web application built with React a
 ### Backend
 - **Framework**: Flask (Python)
 - **Dictionary**: Taiwan MOE Dictionary (moedict-data-twblg) - 14,489 titles + 4,329 synonyms
-- **Romanization**: MOE Dictionary → TauPhahJi-Command fallback (台灣語言音標轉換)
-- **Translation**: Anthropic Claude API (English/Mandarin → Taiwan Mandarin with Taiwan vocabulary)
+- **Romanization**: MOE Dictionary → definition search → TauPhahJi-Command fallback (台灣語言音標轉換)
+- **Translation**: Anthropic Claude API - English → BOTH Taiwan Mandarin (國語) AND Taiwanese (台語)
+  - Taiwan Mandarin: Uses Taiwan vocabulary (腳踏車, 很好, 吃飯)
+  - Taiwanese: Uses Taiwanese vocabulary (跤踏車, 真好/誠好/足好, 食飯)
 - **Character Normalization**: Mandarin → Taiwanese variant mapping (腳 → 跤)
 - **Audio**: Hapsing API (with server-side proxy and caching)
 - **Production Server**: Gunicorn WSGI
@@ -125,16 +130,20 @@ Preview the production build locally.
 
 ## Key Features
 
-1. **English/Mandarin to Taiwanese Translation**: Uses Claude API with Taiwan-specific vocabulary instructions (腳踏車 not 自行車, 公車 not 公共汽車, etc.)
+1. **Dual Translation System**: English → BOTH Taiwan Mandarin (國語) AND Taiwanese (台語) using Claude API
+   - Taiwan Mandarin: Uses Taiwan-specific vocabulary (腳踏車, 很好, 吃飯, not China Mandarin 自行車, 公共汽車)
+   - Taiwanese: Uses Taiwanese vocabulary (跤踏車, 真好/誠好/足好, 食飯)
+   - Different word order: Taiwanese uses "是 + 真/誠/足 + adjective" (e.g., 是真好 not 真是好)
 2. **MOE Dictionary Integration**: Loads Taiwan Ministry of Education Taiwanese Dictionary (14,489 titles + 4,329 synonyms = 16,579 entries) for accurate romanization
-3. **Character Variant Normalization**: Automatically converts Mandarin characters to Taiwanese variants (腳 → 跤) for better dictionary matching
-4. **Romanization Priority**: MOE Dictionary → normalized lookup → character-by-character → TauPhahJi fallback
-5. **Pinyin Generation**: Claude generates Taiwan-style Pinyin alongside Mandarin translation (not pypinyin library)
-6. **Audio Playback**: Authentic Taiwanese pronunciation via Hapsing API with server-side proxy
-7. **Audio Caching**: In-memory cache for faster repeated audio requests
-8. **Pre-caching**: Common phrases pre-loaded on server startup for instant playback
-9. **Common Phrases**: 11 pre-loaded phrases with instant audio playback
-10. **Clean UI**: No external popups or links - all functionality embedded in the app
+3. **Definition Search**: Finds Mandarin words (like 很) by searching MOE dictionary definitions to map to Taiwanese equivalents (真/誠/足)
+4. **Character Variant Normalization**: Automatically converts Mandarin characters to Taiwanese variants (腳 → 跤) for better dictionary matching
+5. **Romanization Priority**: MOE Dictionary → normalized lookup → definition search → TauPhahJi fallback
+6. **Pinyin Generation**: Claude generates Taiwan-style Pinyin alongside Mandarin translation (not pypinyin library)
+7. **Audio Playback**: Authentic Taiwanese pronunciation via Hapsing API with server-side proxy
+8. **Audio Caching**: In-memory cache for faster repeated audio requests
+9. **Pre-caching**: Common phrases pre-loaded on server startup for instant playback
+10. **Common Phrases**: 11 pre-loaded phrases with instant audio playback
+11. **Clean UI**: No external popups or links - all functionality embedded in the app
 
 ## Architecture
 
@@ -155,10 +164,10 @@ Preview the production build locally.
 
 1. **`POST /api/romanize`**
    - Handles English, Mandarin, and Taiwanese input
-   - If English/Mandarin: translates to Taiwan Mandarin using Claude API with Taiwan vocabulary, generates Pinyin, then romanizes
+   - If English/Mandarin: translates to BOTH Taiwan Mandarin (國語) AND Taiwanese (台語) using Claude API with different vocabulary, generates Pinyin, then romanizes Taiwanese
    - If Taiwanese: directly romanizes using MOE Dictionary priority system
-   - Romanization priority: MOE dict exact match → character normalization → character-by-character → TauPhahJi fallback
-   - Returns: translation, romanization, Han characters, KIP format, Pinyin (for Mandarin)
+   - Romanization priority: MOE dict exact match → character normalization → definition search → TauPhahJi fallback
+   - Returns: mandarin (Taiwan Mandarin), translation (Taiwanese), romanization (Tâi-lô), Han characters, KIP format, Pinyin
 
 2. **`GET /api/audio?taibun={text}`**
    - Server-side proxy to Hapsing API (avoids CORS)
@@ -193,8 +202,8 @@ The app uses a sophisticated multi-tier romanization system:
 ### Priority System
 1. **MOE Dictionary Exact Match**: Check if the full phrase exists in the dictionary
 2. **Character Normalization**: Convert Mandarin characters to Taiwanese variants (腳 → 跤) and retry lookup
-3. **Character-by-Character**: Break phrase into individual characters and look up each in MOE dict
-4. **TauPhahJi Fallback**: Use TauPhahJi-Command as last resort
+3. **Definition Search**: Search MOE dictionary definitions to find Mandarin words (like 很) defined in Taiwanese entries (真/誠/足)
+4. **TauPhahJi Fallback**: Use TauPhahJi-Command as last resort with normalized text for proper tone sandhi
 
 ### Character Variant Mapping
 ```python
@@ -224,14 +233,19 @@ When Claude translates "bicycle" to "腳踏車" (Mandarin variant), the system:
 
 ## API Integration
 
-### Claude API (English/Mandarin → Taiwan Mandarin Translation)
+### Claude API (English → Taiwan Mandarin + Taiwanese Dual Translation)
 - Model: `claude-3-5-haiku-20241022`
 - Used in `translate_english_to_taiwanese_with_mandarin()` function
-- Accepts both English and Mandarin Chinese input
-- Prompt: Translate to Taiwan Mandarin (台灣華語/國語) with Taiwan-specific vocabulary
-  - Examples: bicycle → 腳踏車 (NOT 自行車), bus → 公車 (NOT 公共汽車), taxi → 計程車 (NOT 出租車)
-- Returns: Taiwan Mandarin in traditional characters + Taiwan-style Pinyin
-- Format: `MANDARIN: {text}\nPINYIN: {pinyin}`
+- Accepts English input
+- Prompt: Translate to BOTH Taiwan Mandarin (國語) AND Taiwanese (台語) with vocabulary differences
+  - Taiwan Mandarin vocabulary: 腳踏車 (bicycle), 很/真的 (very), 吃 (eat), 好玩 (fun), 的 (particle)
+  - Taiwanese vocabulary: 跤踏車 (bicycle), 真/誠/足 (very), 食 (eat), 好耍/好sńg (fun), 的 (particle)
+  - Word order: Taiwanese uses "是 + 真/誠/足 + adjective" (e.g., 是真好 not 真是好)
+- Returns: BOTH translations in traditional characters + Taiwan-style Pinyin for Mandarin
+- Format: `MANDARIN: {taiwan_mandarin_text}\nTAIWANESE: {taiwanese_text}\nPINYIN: {pinyin}`
+- Examples:
+  - "riding bikes is fun": MANDARIN: 騎腳踏車很好玩 / TAIWANESE: 騎跤踏車真好耍
+  - "riding bikes is a great workout": MANDARIN: 騎腳踏車是很棒的運動 / TAIWANESE: 騎跤踏車是真好的運動
 
 ### MOE Dictionary (moedict-data-twblg)
 - Source: Taiwan Ministry of Education Taiwanese Dictionary via g0v (https://github.com/g0v/moedict-data-twblg)
@@ -300,9 +314,10 @@ server: {
 3. Test with both dev servers running
 
 ### Modifying Translation Logic
-1. Edit `translate_english_to_taiwanese()` in `backend/app.py`
-2. Adjust Claude API prompt as needed
-3. Test with various English inputs
+1. Edit `translate_english_to_taiwanese_with_mandarin()` in `backend/app.py`
+2. Adjust Claude API prompt to modify vocabulary or word order rules
+3. Update format parsing if changing output structure (MANDARIN/TAIWANESE/PINYIN lines)
+4. Test with various English inputs to verify both Taiwan Mandarin and Taiwanese translations
 
 ### Updating Common Phrases
 1. Edit `COMMON_PHRASES` array in `backend/app.py` for pre-caching
@@ -381,4 +396,3 @@ pypinyin==0.55.0  # Fallback for Pinyin generation when Claude doesn't provide i
   }
 }
 ```
-- number 1 and 2 and 3 and 4

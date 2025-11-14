@@ -41,6 +41,7 @@ def normalize_taiwanese_text(text):
 
 # Load MOE Taiwanese Dictionary on startup
 moe_dict = {}
+moe_data = []  # Keep full data for definition searches
 try:
     dict_path = os.path.join(os.path.dirname(__file__), 'moedict-twblg.json')
     if os.path.exists(dict_path):
@@ -78,6 +79,26 @@ try:
 except Exception as e:
     print(f"⚠️  Error loading MOE dictionary: {e}, using Tau-Phah-Ji only")
     moe_dict = {}
+    moe_data = []
+
+def search_in_definitions(search_text):
+    """Search for a word in MOE dictionary definitions and return the entry's romanization"""
+    for entry in moe_data:
+        if 'heteronyms' in entry and len(entry['heteronyms']) > 0:
+            heteronym = entry['heteronyms'][0]
+            tailo = heteronym.get('trs', '')
+            definitions = heteronym.get('definitions', [])
+
+            # Search in definition text
+            for defn in definitions:
+                def_text = defn.get('def', '')
+                # Check if search_text appears at the start of definition (common pattern: "很。...")
+                if def_text.startswith(search_text + '。') or def_text.startswith(search_text + ',') or def_text == search_text:
+                    title = entry.get('title', '')
+                    print(f"✅ Found in definitions: {search_text} defined as {title} → {tailo}")
+                    return tailo, title
+
+    return None, None
 
 # Common phrases to pre-cache
 COMMON_PHRASES = [
@@ -268,38 +289,22 @@ def get_taiwanese_romanization(taiwanese_text):
         print(f"✅ Found in MOE dict (normalized): {taiwanese_text} → {normalized_text} → {moe_dict[normalized_text]}")
         return moe_dict[normalized_text], normalized_text
 
-    # Try character-by-character lookup for multi-character phrases
-    if len(taiwanese_text) > 1:
-        parts = []
-        # Use normalized text for lookup
-        lookup_text = normalized_text if normalized_text != taiwanese_text else taiwanese_text
-        for char in lookup_text:
-            if char in moe_dict:
-                parts.append(moe_dict[char])
-            else:
-                # Fallback to Tau-Phah-Ji for this character
-                try:
-                    result = tàuphahjī(char)
-                    kip = result.get('KIP', char)
-                    parts.append(kip)
-                except:
-                    parts.append(char)
+    # Search in definitions (e.g., find 很 defined as 真/誠/足)
+    tailo, title = search_in_definitions(taiwanese_text)
+    if tailo and title:
+        return tailo, title
 
-        if parts:
-            romanization = ' '.join(parts)
-            print(f"✅ Character-by-character: {taiwanese_text} → {romanization}")
-            return romanization, lookup_text
-
-    # Fallback to Tau-Phah-Ji
-    print(f"ℹ️  Not in MOE dict, using Tau-Phah-Ji: {taiwanese_text}")
+    # Fallback to Tau-Phah-Ji for full phrase (handles word segmentation and tone sandhi)
+    # Use normalized text so TauPhahJi gets Taiwanese variants (跤 not 腳)
+    print(f"ℹ️  Not in MOE dict, using Tau-Phah-Ji: {taiwanese_text} (normalized: {normalized_text})")
     try:
-        result = tàuphahjī(taiwanese_text)
+        result = tàuphahjī(normalized_text)
         kip_romanization = result.get('KIP', '')
-        han_characters = result.get('漢字', taiwanese_text)
+        han_characters = result.get('漢字', normalized_text)
         return kip_romanization, han_characters
     except Exception as e:
         print(f"⚠️  Tau-Phah-Ji failed: {e}")
-        return '', taiwanese_text
+        return '', normalized_text
 
 def convert_kip_to_tailo(kip_text):
     """
@@ -463,26 +468,38 @@ def romanize_stream():
                     max_tokens=500,
                     messages=[{
                         "role": "user",
-                        "content": f"""Translate to Taiwan Mandarin (台灣華語/國語), using vocabulary commonly used in Taiwan, NOT Mainland China.
+                        "content": f"""You must provide translations in BOTH Taiwan Mandarin (國語) AND Taiwanese (台語).
 
-Examples of Taiwan vocabulary preferences:
-- bicycle: 腳踏車 (NOT 自行車)
-- bus: 公車 (NOT 公共汽車)
-- taxi: 計程車 (NOT 出租車)
-- metro/subway: 捷運 (NOT 地鐵)
-- parking lot: 停車場 (NOT 停车场)
-- software: 軟體 (NOT 软件)
-- computer: 電腦 (NOT 计算机)
+Input English text: "{text}"
 
-Input: "{text}"
+CRITICAL: You MUST output EXACTLY THREE lines in this format (no explanations, no notes):
 
-Provide the output in exactly this format:
-MANDARIN: [Taiwan Mandarin in traditional characters]
-PINYIN: [Hanyu Pinyin with tone marks]
+MANDARIN: [Taiwan Mandarin translation - use 腳踏車 for bicycle, 很 for very, 吃 for eat]
+TAIWANESE: [Taiwanese translation - use 跤踏車 for bicycle, 真/誠/足 for very, 食 for eat]
+PINYIN: [Hanyu Pinyin for the MANDARIN translation]
 
-Example:
-MANDARIN: 腳踏車
-PINYIN: jiǎo tà chē"""
+Key vocabulary differences:
+Taiwan Mandarin vs Taiwanese:
+- bicycle: 腳踏車 vs 跤踏車
+- very/really: 很/真的 vs 真/誠/足
+- eat: 吃 vs 食
+- fun/play: 好玩 vs 好耍/好sńg
+- possessive/descriptive particle: 的 vs 的 (both use 的, never 搝 or other variants)
+
+Example for "riding bikes is fun":
+MANDARIN: 騎腳踏車很好玩
+TAIWANESE: 騎跤踏車真好耍
+PINYIN: qí jiǎo tà chē hěn hǎo wán
+
+Example for "riding bikes is a great workout":
+MANDARIN: 騎腳踏車是很棒的運動
+TAIWANESE: 騎跤踏車是真好的運動
+PINYIN: qí jiǎo tà chē shì hěn bàng de yùn dòng
+
+Note: Taiwanese word order is 是 + 真/誠/足 + adjective (e.g., 是真好 not 真是好)
+
+Now translate: "{text}"
+Output ONLY the three lines (MANDARIN, TAIWANESE, PINYIN)."""
                     }]
                 ) as stream:
                     response_text = ""
@@ -495,21 +512,26 @@ PINYIN: jiǎo tà chē"""
                 # Parse the response
                 lines = response_text.split('\n')
                 mandarin_text = ""
+                taiwanese_text = ""
                 pinyin_text = ""
 
                 for line in lines:
                     if line.startswith('MANDARIN:'):
                         mandarin_text = line.replace('MANDARIN:', '').strip()
+                    elif line.startswith('TAIWANESE:'):
+                        taiwanese_text = line.replace('TAIWANESE:', '').strip()
                     elif line.startswith('PINYIN:'):
                         pinyin_text = line.replace('PINYIN:', '').strip()
+
+                # Debug logging
+                print(f"📝 Claude response: {response_text[:200]}")
+                print(f"📝 Parsed Mandarin: {mandarin_text}")
+                print(f"📝 Parsed Taiwanese: {taiwanese_text}")
 
                 # Fallback to pypinyin if Claude didn't provide Pinyin
                 if not pinyin_text and mandarin_text:
                     pinyin_list = pinyin(mandarin_text, style=Style.TONE)
                     pinyin_text = ' '.join([p[0] for p in pinyin_list])
-
-                # Use same characters as Taiwanese
-                taiwanese_text = mandarin_text
 
                 # Get romanization from MOE dictionary + Tau-Phah-Ji
                 tailo_romanization, han_characters = get_taiwanese_romanization(taiwanese_text)
@@ -520,7 +542,7 @@ PINYIN: jiǎo tà chē"""
                     'status': 'complete',
                     'success': True,
                     'translation': taiwanese_text,
-                    'mandarin': mandarin_text,
+                    'mandarin': mandarin_text,  # Taiwan Mandarin (國語)
                     'pinyin': pinyin_text,
                     'romanization': tailo_romanization,
                     'hanCharacters': han_characters,

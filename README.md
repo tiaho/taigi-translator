@@ -4,9 +4,12 @@ A React-based web application for romanizing Taiwanese text, featuring Tâi-lô 
 
 ## Features
 
-- 🔄 English/Mandarin to Taiwanese translation using Claude API with Taiwan-specific vocabulary
+- 🔄 **Dual Translation**: English → BOTH Taiwan Mandarin (國語) AND Taiwanese (台語) using Claude API
+  - Taiwan Mandarin: 腳踏車, 很好, 吃飯 (Taiwan-specific vocabulary, not China Mandarin)
+  - Taiwanese: 跤踏車, 真好/誠好/足好, 食飯 (authentic Taiwanese vocabulary)
 - 📝 Taiwanese text to Tâi-lô (Tai-lo) romanization using MOE Dictionary + TauPhahJi
 - 📚 Taiwan Ministry of Education Dictionary integration (16,579 entries: 14,489 titles + 4,329 synonyms)
+- 🔍 Definition search: Finds Mandarin words (like 很) by searching dictionary definitions
 - 🔤 Character variant normalization (Mandarin → Taiwanese: 腳 → 跤)
 - 🔊 Authentic Taiwanese audio pronunciation via Hapsing API
 - 💬 Pre-loaded common phrases with audio
@@ -87,17 +90,17 @@ npm run preview
 
 ## Usage
 
-### English/Mandarin to Taiwanese Translation
+### English to Taiwan Mandarin + Taiwanese Translation
 
 1. **Make sure source language is set to "English/Mandarin"**
-2. **Type English or Mandarin text**
-   - English examples: "Hello", "Thank you"
-   - Mandarin examples: "你好", "謝謝"
+2. **Type English text**
+   - Examples: "Hello", "riding bikes is a great workout"
 3. Click "Translate" or press Ctrl+Enter
-4. View:
-   - Taiwanese translation in Han characters (漢字)
-   - Tâi-lô romanization
-   - Audio pronunciation
+4. View **BOTH** translations:
+   - **Taiwan Mandarin (國語)**: Uses Taiwan vocabulary (腳踏車, 很好, 計程車)
+   - **Taiwanese (台語)**: Uses Taiwanese vocabulary (跤踏車, 真好, 的士)
+   - **Tâi-lô romanization**: For the Taiwanese translation
+   - **Audio pronunciation**: Authentic Taiwanese pronunciation
 
 ### Taiwanese Romanization
 
@@ -118,8 +121,10 @@ Explore pre-loaded common phrases with audio in the expandable section at the bo
 - **Requires Anthropic API key** for English/Mandarin to Taiwanese translation
 - Backend server must be running for all functionality
 - Audio requires internet connection to fetch from Hapsing API
-- **Taiwan-specific vocabulary**: Uses Taiwan Mandarin (腳踏車, 公車, 計程車) not China Mandarin (自行車, 公共汽車, 出租車)
-- **Dictionary priority**: MOE Dictionary → character normalization → character-by-character → TauPhahJi fallback
+- **Dual translation system**: Shows BOTH Taiwan Mandarin (國語) AND Taiwanese (台語) with different vocabulary
+  - Taiwan Mandarin: 腳踏車, 很好, 吃飯 (Taiwan-specific, not China Mandarin like 自行車, 公共汽車)
+  - Taiwanese: 跤踏車, 真好/誠好, 食飯 (authentic Taiwanese vocabulary)
+- **Romanization priority**: MOE Dictionary → character normalization → definition search → TauPhahJi fallback
 
 ## Technology Stack
 
@@ -134,7 +139,7 @@ Explore pre-loaded common phrases with audio in the expandable section at the bo
 - **MOE Dictionary** - Taiwan Ministry of Education Taiwanese Dictionary (g0v/moedict-data-twblg)
 - **TauPhahJi-Command** - Taiwanese romanization fallback
 - **Hapsing API** - Taiwanese audio
-- **Claude API** - English to Taiwan Mandarin translation with Taiwan-specific vocabulary
+- **Claude API** - English to BOTH Taiwan Mandarin (國語) and Taiwanese (台語) with vocabulary differences
 - **Gunicorn** - Production WSGI server
 
 ## Deployment
