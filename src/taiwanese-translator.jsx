@@ -680,7 +680,7 @@ export default function TaiwaneseTranslator() {
 
   const createFlashcardsFromVocabList = (category) => {
     const words = vocabularyLists[category] || customVocabLists[category] || [];
-    let addedCount = 0;
+    const newCards = [];
 
     words.forEach(word => {
       // Check if card already exists
@@ -689,12 +689,42 @@ export default function TaiwaneseTranslator() {
       );
 
       if (!exists) {
-        addToFlashcards(word.en, word.han, word.tailo, word.mandarin);
-        addedCount++;
+        // Create new card object
+        const newCard = {
+          id: Date.now() + newCards.length, // Ensure unique IDs
+          front: word.en,
+          back: word.han,
+          tailo: word.tailo,
+          mandarin: word.mandarin || '',
+          createdAt: new Date().toISOString(),
+          // SRS fields
+          lastReviewedAt: null,
+          nextReviewAt: new Date().toISOString(),
+          interval: 0,
+          reviewCount: 0,
+          status: 'learning'
+        };
+        newCards.push(newCard);
       }
     });
 
-    alert(`Added ${addedCount} new flashcards from "${category}"!`);
+    if (newCards.length > 0) {
+      // Add all cards at once
+      const updatedFlashcards = [...flashcards, ...newCards];
+      setFlashcards(updatedFlashcards);
+
+      // Save to localStorage
+      try {
+        localStorage.setItem('flashcards', JSON.stringify(updatedFlashcards));
+        console.log(`✅ Added ${newCards.length} flashcards from "${category}"`);
+      } catch (e) {
+        console.error('Error saving flashcards:', e);
+      }
+
+      alert(`Added ${newCards.length} new flashcards from "${category}"!`);
+    } else {
+      alert(`All cards from "${category}" already exist in your flashcards!`);
+    }
   };
 
   const deleteFlashcard = (id) => {
