@@ -4,12 +4,14 @@ A React-based web application for romanizing Taiwanese text, featuring Tâi-lô 
 
 ## Features
 
-- 🔄 English/Mandarin to Taiwanese translation (using Claude API)
-- 📝 Taiwanese text to Tâi-lô (Tai-lo) romanization (using TauPhahJi)
+- 🔄 English/Mandarin to Taiwanese translation using Claude API with Taiwan-specific vocabulary
+- 📝 Taiwanese text to Tâi-lô (Tai-lo) romanization using MOE Dictionary + TauPhahJi
+- 📚 Taiwan Ministry of Education Dictionary integration (16,579 entries: 14,489 titles + 4,329 synonyms)
+- 🔤 Character variant normalization (Mandarin → Taiwanese: 腳 → 跤)
 - 🔊 Authentic Taiwanese audio pronunciation via Hapsing API
-- 📚 Pre-loaded common phrases with audio
+- 💬 Pre-loaded common phrases with audio
 - 🌐 Clean, modern UI with Tailwind CSS
-- 🐍 Python backend with TauPhahJi-Command and Claude API
+- 🐍 Python backend with MOE Dictionary, TauPhahJi-Command, and Claude API
 
 ## Setup
 
@@ -116,6 +118,8 @@ Explore pre-loaded common phrases with audio in the expandable section at the bo
 - **Requires Anthropic API key** for English/Mandarin to Taiwanese translation
 - Backend server must be running for all functionality
 - Audio requires internet connection to fetch from Hapsing API
+- **Taiwan-specific vocabulary**: Uses Taiwan Mandarin (腳踏車, 公車, 計程車) not China Mandarin (自行車, 公共汽車, 出租車)
+- **Dictionary priority**: MOE Dictionary → character normalization → character-by-character → TauPhahJi fallback
 
 ## Technology Stack
 
@@ -127,9 +131,10 @@ Explore pre-loaded common phrases with audio in the expandable section at the bo
 
 ### Backend
 - **Flask** - Python web framework
-- **TauPhahJi-Command** - Taiwanese romanization
+- **MOE Dictionary** - Taiwan Ministry of Education Taiwanese Dictionary (g0v/moedict-data-twblg)
+- **TauPhahJi-Command** - Taiwanese romanization fallback
 - **Hapsing API** - Taiwanese audio
-- **Claude API** - English to Taiwanese translation
+- **Claude API** - English to Taiwan Mandarin translation with Taiwan-specific vocabulary
 - **Gunicorn** - Production WSGI server
 
 ## Deployment

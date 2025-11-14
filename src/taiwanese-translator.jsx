@@ -25,6 +25,19 @@ export default function TaiwaneseTranslator() {
       return {};
     }
   });
+  const [flashcards, setFlashcards] = useState(() => {
+    // Load flashcards from localStorage on mount
+    try {
+      const saved = localStorage.getItem('flashcards');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error('Error loading flashcards:', e);
+      return [];
+    }
+  });
+  const [showFlashcards, setShowFlashcards] = useState(false);
+  const [currentCardIndex, setCurrentCardIndex] = useState(0);
+  const [isCardFlipped, setIsCardFlipped] = useState(false);
   const [pronunciationGuide, setPronunciationGuide] = useState('');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [audioError, setAudioError] = useState('');
@@ -637,6 +650,81 @@ export default function TaiwaneseTranslator() {
     }
   };
 
+  const addToFlashcards = (front, back, tailo, mandarin = '') => {
+    const newCard = {
+      id: Date.now(),
+      front, // English or Mandarin
+      back, // Taiwanese
+      tailo,
+      mandarin,
+      createdAt: new Date().toISOString()
+    };
+
+    const updatedFlashcards = [...flashcards, newCard];
+    setFlashcards(updatedFlashcards);
+
+    // Save to localStorage
+    try {
+      localStorage.setItem('flashcards', JSON.stringify(updatedFlashcards));
+      console.log('✅ Saved flashcard to localStorage');
+    } catch (e) {
+      console.error('Error saving flashcard:', e);
+    }
+  };
+
+  const createFlashcardsFromVocabList = (category) => {
+    const words = vocabularyLists[category] || customVocabLists[category] || [];
+    let addedCount = 0;
+
+    words.forEach(word => {
+      // Check if card already exists
+      const exists = flashcards.some(card =>
+        card.front === word.en && card.back === word.han
+      );
+
+      if (!exists) {
+        addToFlashcards(word.en, word.han, word.tailo, word.mandarin);
+        addedCount++;
+      }
+    });
+
+    alert(`Added ${addedCount} new flashcards from "${category}"!`);
+  };
+
+  const deleteFlashcard = (id) => {
+    const updatedFlashcards = flashcards.filter(card => card.id !== id);
+    setFlashcards(updatedFlashcards);
+
+    try {
+      localStorage.setItem('flashcards', JSON.stringify(updatedFlashcards));
+      console.log('✅ Deleted flashcard from localStorage');
+    } catch (e) {
+      console.error('Error saving flashcards:', e);
+    }
+
+    // Adjust current index if needed
+    if (currentCardIndex >= updatedFlashcards.length && currentCardIndex > 0) {
+      setCurrentCardIndex(currentCardIndex - 1);
+    }
+  };
+
+  const shuffleFlashcards = () => {
+    const shuffled = [...flashcards].sort(() => Math.random() - 0.5);
+    setFlashcards(shuffled);
+    setCurrentCardIndex(0);
+    setIsCardFlipped(false);
+  };
+
+  const nextCard = () => {
+    setIsCardFlipped(false);
+    setCurrentCardIndex((prev) => (prev + 1) % flashcards.length);
+  };
+
+  const prevCard = () => {
+    setIsCardFlipped(false);
+    setCurrentCardIndex((prev) => (prev - 1 + flashcards.length) % flashcards.length);
+  };
+
   const generateCustomVocab = async () => {
     if (!customTopic.trim()) return;
 
@@ -977,10 +1065,27 @@ export default function TaiwaneseTranslator() {
                   {isSpeaking && !audioError && (
                     <p className="text-xs text-gray-600 text-center">First time may take 10-20 seconds. Cached after first play.</p>
                   )}
-                  
+
                   {audioError && (
                     <p className="text-xs text-red-600 text-center">{audioError}</p>
                   )}
+
+                  {/* Add to Flashcards Button */}
+                  <button
+                    onClick={() => {
+                      addToFlashcards(
+                        sourceLanguage === 'mandarin' ? inputText : inputText,
+                        hanCharacters,
+                        romanization,
+                        sourceLanguage === 'english' ? mandarinText : ''
+                      );
+                      alert('Added to flashcards!');
+                    }}
+                    className="w-full p-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+                  >
+                    <span>➕</span>
+                    <span>Add to Flashcards</span>
+                  </button>
                 </div>
               )}
             </div>
@@ -1127,6 +1232,17 @@ export default function TaiwaneseTranslator() {
                 })}
               </div>
 
+              {/* Create Flashcards from Vocab Button */}
+              <div className="mb-4">
+                <button
+                  onClick={() => createFlashcardsFromVocabList(selectedVocabCategory)}
+                  className="w-full py-2 px-4 bg-purple-600 text-white rounded-lg font-medium text-sm hover:bg-purple-700 transition-colors flex items-center justify-center gap-2"
+                >
+                  <span>📚</span>
+                  <span>Create Flashcards from "{selectedVocabCategory}"</span>
+                </button>
+              </div>
+
               {/* Vocabulary Words */}
               <div className="grid md:grid-cols-2 gap-3">
                 {(vocabularyLists[selectedVocabCategory] || customVocabLists[selectedVocabCategory] || []).map((word, index) => (
@@ -1169,6 +1285,144 @@ export default function TaiwaneseTranslator() {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+        </div>
+
+        {/* Flashcards Section */}
+        <div className="mt-6 bg-white rounded-lg shadow-md overflow-hidden">
+          <button
+            onClick={() => setShowFlashcards(!showFlashcards)}
+            className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">🎴</span>
+              <span className="font-medium text-gray-800">
+                Flashcards {flashcards.length > 0 && `(${flashcards.length})`}
+              </span>
+            </div>
+            <span className="text-gray-400">{showFlashcards ? '−' : '+'}</span>
+          </button>
+
+          {showFlashcards && (
+            <div className="p-4 border-t">
+              {flashcards.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p className="mb-2">No flashcards yet!</p>
+                  <p className="text-sm">Add cards from translations or create from vocabulary lists.</p>
+                </div>
+              ) : (
+                <div>
+                  {/* Flashcard Controls */}
+                  <div className="flex gap-2 mb-4">
+                    <button
+                      onClick={shuffleFlashcards}
+                      className="flex-1 py-2 px-4 bg-indigo-600 text-white rounded-lg font-medium text-sm hover:bg-indigo-700 transition-colors"
+                    >
+                      🔀 Shuffle
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm(`Delete all ${flashcards.length} flashcards?`)) {
+                          setFlashcards([]);
+                          localStorage.setItem('flashcards', JSON.stringify([]));
+                          setCurrentCardIndex(0);
+                        }
+                      }}
+                      className="flex-1 py-2 px-4 bg-red-600 text-white rounded-lg font-medium text-sm hover:bg-red-700 transition-colors"
+                    >
+                      🗑️ Clear All
+                    </button>
+                  </div>
+
+                  {/* Card Counter */}
+                  <div className="text-center mb-4">
+                    <span className="text-sm font-medium text-gray-600">
+                      Card {currentCardIndex + 1} of {flashcards.length}
+                    </span>
+                  </div>
+
+                  {/* Flashcard Display */}
+                  <div className="relative mb-4" style={{ perspective: '1000px' }}>
+                    <div
+                      onClick={() => setIsCardFlipped(!isCardFlipped)}
+                      className="relative w-full h-64 cursor-pointer"
+                      style={{
+                        transformStyle: 'preserve-3d',
+                        transition: 'transform 0.6s',
+                        transform: isCardFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
+                      }}
+                    >
+                      {/* Front of Card */}
+                      <div
+                        className="absolute w-full h-full bg-gradient-to-br from-purple-100 to-pink-100 rounded-lg shadow-lg p-6 flex flex-col items-center justify-center"
+                        style={{
+                          backfaceVisibility: 'hidden',
+                          WebkitBackfaceVisibility: 'hidden'
+                        }}
+                      >
+                        <p className="text-xs text-purple-600 mb-2">Front</p>
+                        <p className="text-2xl font-bold text-gray-800 text-center mb-2">
+                          {flashcards[currentCardIndex]?.front}
+                        </p>
+                        {flashcards[currentCardIndex]?.mandarin && (
+                          <p className="text-lg text-amber-700 font-serif">
+                            {flashcards[currentCardIndex].mandarin}
+                          </p>
+                        )}
+                        <p className="text-xs text-gray-500 mt-4">Click to flip</p>
+                      </div>
+
+                      {/* Back of Card */}
+                      <div
+                        className="absolute w-full h-full bg-gradient-to-br from-indigo-100 to-blue-100 rounded-lg shadow-lg p-6 flex flex-col items-center justify-center"
+                        style={{
+                          backfaceVisibility: 'hidden',
+                          WebkitBackfaceVisibility: 'hidden',
+                          transform: 'rotateY(180deg)'
+                        }}
+                      >
+                        <p className="text-xs text-indigo-600 mb-2">Back</p>
+                        <p className="text-3xl font-bold text-indigo-900 text-center mb-2 font-serif">
+                          {flashcards[currentCardIndex]?.back}
+                        </p>
+                        <p className="text-sm text-gray-600 italic">
+                          {flashcards[currentCardIndex]?.tailo}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-4">Click to flip</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Navigation Buttons */}
+                  <div className="flex gap-2 mb-4">
+                    <button
+                      onClick={prevCard}
+                      className="flex-1 py-2 px-4 bg-gray-600 text-white rounded-lg font-medium text-sm hover:bg-gray-700 transition-colors"
+                    >
+                      ← Previous
+                    </button>
+                    <button
+                      onClick={nextCard}
+                      className="flex-1 py-2 px-4 bg-gray-600 text-white rounded-lg font-medium text-sm hover:bg-gray-700 transition-colors"
+                    >
+                      Next →
+                    </button>
+                  </div>
+
+                  {/* Delete Current Card */}
+                  <button
+                    onClick={() => {
+                      if (confirm('Delete this flashcard?')) {
+                        deleteFlashcard(flashcards[currentCardIndex].id);
+                      }
+                    }}
+                    className="w-full py-2 px-4 bg-red-100 text-red-700 rounded-lg font-medium text-sm hover:bg-red-200 transition-colors"
+                  >
+                    Delete Current Card
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

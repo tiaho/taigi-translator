@@ -5,8 +5,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 
 TaigiApp is a full-stack Taiwanese translator web application built with React and Flask. It provides:
-- English/Mandarin to Taiwanese translation (using Claude API)
-- Taiwanese text to Tâi-lô romanization (using TauPhahJi)
+- English/Mandarin to Taiwanese translation (using Claude API with Taiwan-specific vocabulary)
+- Taiwanese text to Tâi-lô romanization (using MOE Dictionary with TauPhahJi fallback)
+- Taiwan Ministry of Education Dictionary (16,579 entries: 14,489 titles + 4,329 synonyms)
+- Character variant normalization (Mandarin → Taiwanese: 腳 → 跤)
 - Authentic audio pronunciation (via Hapsing API with caching)
 - Pre-loaded common phrases with instant audio playback
 
@@ -21,8 +23,10 @@ TaigiApp is a full-stack Taiwanese translator web application built with React a
 
 ### Backend
 - **Framework**: Flask (Python)
-- **Romanization**: TauPhahJi-Command (台灣語言音標轉換)
-- **Translation**: Anthropic Claude API (English/Mandarin → Taiwanese)
+- **Dictionary**: Taiwan MOE Dictionary (moedict-data-twblg) - 14,489 titles + 4,329 synonyms
+- **Romanization**: MOE Dictionary → TauPhahJi-Command fallback (台灣語言音標轉換)
+- **Translation**: Anthropic Claude API (English/Mandarin → Taiwan Mandarin with Taiwan vocabulary)
+- **Character Normalization**: Mandarin → Taiwanese variant mapping (腳 → 跤)
 - **Audio**: Hapsing API (with server-side proxy and caching)
 - **Production Server**: Gunicorn WSGI
 - **Language**: Python 3.8+
@@ -42,7 +46,8 @@ TaigiApp/
 │   ├── taiwanese-translator.jsx # Main translator component
 │   └── index.css             # Tailwind CSS imports
 ├── backend/                  # Python Flask backend
-│   └── app.py                # Flask API server with TauPhahJi, Claude API, audio proxy
+│   ├── app.py                # Flask API server with MOE dict, TauPhahJi, Claude API, audio proxy
+│   └── moedict-twblg.json    # Taiwan MOE Dictionary (7.4MB, 14,489 entries)
 ├── venv/                     # Python virtual environment (not in git)
 ├── dist/                     # Production build output (not in git)
 ├── node_modules/             # Node.js dependencies (not in git)
@@ -120,13 +125,16 @@ Preview the production build locally.
 
 ## Key Features
 
-1. **English/Mandarin to Taiwanese Translation**: Uses Claude API to translate English or Mandarin text to Taiwanese (traditional Chinese characters)
-2. **Romanization**: Converts Taiwanese text (Han characters) to Tâi-lô romanization using TauPhahJi
-3. **Audio Playback**: Authentic Taiwanese pronunciation via Hapsing API with server-side proxy
-4. **Audio Caching**: In-memory cache for faster repeated audio requests
-5. **Pre-caching**: Common phrases pre-loaded on server startup for instant playback
-6. **Common Phrases**: 11 pre-loaded phrases with instant audio playback
-7. **Clean UI**: No external popups or links - all functionality embedded in the app
+1. **English/Mandarin to Taiwanese Translation**: Uses Claude API with Taiwan-specific vocabulary instructions (腳踏車 not 自行車, 公車 not 公共汽車, etc.)
+2. **MOE Dictionary Integration**: Loads Taiwan Ministry of Education Taiwanese Dictionary (14,489 titles + 4,329 synonyms = 16,579 entries) for accurate romanization
+3. **Character Variant Normalization**: Automatically converts Mandarin characters to Taiwanese variants (腳 → 跤) for better dictionary matching
+4. **Romanization Priority**: MOE Dictionary → normalized lookup → character-by-character → TauPhahJi fallback
+5. **Pinyin Generation**: Claude generates Taiwan-style Pinyin alongside Mandarin translation (not pypinyin library)
+6. **Audio Playback**: Authentic Taiwanese pronunciation via Hapsing API with server-side proxy
+7. **Audio Caching**: In-memory cache for faster repeated audio requests
+8. **Pre-caching**: Common phrases pre-loaded on server startup for instant playback
+9. **Common Phrases**: 11 pre-loaded phrases with instant audio playback
+10. **Clean UI**: No external popups or links - all functionality embedded in the app
 
 ## Architecture
 
@@ -147,9 +155,10 @@ Preview the production build locally.
 
 1. **`POST /api/romanize`**
    - Handles English, Mandarin, and Taiwanese input
-   - If English/Mandarin: translates to Taiwanese using Claude API, then romanizes
-   - If Taiwanese: directly romanizes using TauPhahJi
-   - Returns: translation, romanization, Han characters, KIP format
+   - If English/Mandarin: translates to Taiwan Mandarin using Claude API with Taiwan vocabulary, generates Pinyin, then romanizes
+   - If Taiwanese: directly romanizes using MOE Dictionary priority system
+   - Romanization priority: MOE dict exact match → character normalization → character-by-character → TauPhahJi fallback
+   - Returns: translation, romanization, Han characters, KIP format, Pinyin (for Mandarin)
 
 2. **`GET /api/audio?taibun={text}`**
    - Server-side proxy to Hapsing API (avoids CORS)
@@ -177,19 +186,66 @@ def pre_cache_audio():
 - `ANTHROPIC_API_KEY`: Required for English translation
 - `FLASK_ENV`: Set to `production` for production mode
 
+## Romanization Process
+
+The app uses a sophisticated multi-tier romanization system:
+
+### Priority System
+1. **MOE Dictionary Exact Match**: Check if the full phrase exists in the dictionary
+2. **Character Normalization**: Convert Mandarin characters to Taiwanese variants (腳 → 跤) and retry lookup
+3. **Character-by-Character**: Break phrase into individual characters and look up each in MOE dict
+4. **TauPhahJi Fallback**: Use TauPhahJi-Command as last resort
+
+### Character Variant Mapping
+```python
+CHAR_VARIANTS = {
+    '腳': '跤',  # foot/leg (Mandarin → Taiwanese)
+    '脚': '跤',  # simplified variant
+}
+```
+
+When Claude translates "bicycle" to "腳踏車" (Mandarin variant), the system:
+1. Doesn't find "腳踏車" in MOE dict
+2. Normalizes to "跤踏車" (Taiwanese variant)
+3. Finds "跤踏車" in dict with romanization "kha-ta̍h-tshia"
+4. Returns accurate Taiwanese pronunciation
+
+### Dictionary Structure Example
+```json
+{
+  "title": "跤踏車",
+  "heteronyms": [{
+    "trs": "kha-ta̍h-tshia",
+    "synonyms": "孔明車,自轉車,鐵馬",
+    "definitions": [{"type": "名", "def": "腳踏車。一種利用雙腳踩踏板前進的兩輪車。"}]
+  }]
+}
+```
+
 ## API Integration
 
-### Claude API (English/Mandarin → Taiwanese Translation)
-- Model: `claude-sonnet-4-20250514`
-- Used in `translate_english_to_taiwanese()` function
+### Claude API (English/Mandarin → Taiwan Mandarin Translation)
+- Model: `claude-3-5-haiku-20241022`
+- Used in `translate_english_to_taiwanese_with_mandarin()` function
 - Accepts both English and Mandarin Chinese input
-- Prompt: Translate to Taiwanese using traditional Chinese characters
-- Returns: Han characters only (no romanization)
+- Prompt: Translate to Taiwan Mandarin (台灣華語/國語) with Taiwan-specific vocabulary
+  - Examples: bicycle → 腳踏車 (NOT 自行車), bus → 公車 (NOT 公共汽車), taxi → 計程車 (NOT 出租車)
+- Returns: Taiwan Mandarin in traditional characters + Taiwan-style Pinyin
+- Format: `MANDARIN: {text}\nPINYIN: {pinyin}`
 
-### TauPhahJi-Command (Python Library)
+### MOE Dictionary (moedict-data-twblg)
+- Source: Taiwan Ministry of Education Taiwanese Dictionary via g0v (https://github.com/g0v/moedict-data-twblg)
+- File: `backend/moedict-twblg.json` (7.4MB, 14,489 entries)
+- Indexed: 14,489 titles + 4,329 synonyms = 16,579 total lookup entries
+- Structure: `{title: string, heteronyms: [{trs: string (Tâi-lô), synonyms: string, definitions: [...]}]}`
+- Provides: Accurate Tâi-lô romanization for Taiwanese words and phrases
+- Character normalization: Converts Mandarin variants to Taiwanese (腳 → 跤) before lookup
+
+### TauPhahJi-Command (Python Library - Fallback)
 - Converts Taiwanese text to structured linguistic data
 - Provides Han characters, KIP romanization, and word segmentation
 - KIP is converted to Tâi-lô in the backend (simplified conversion)
+- Used only when MOE Dictionary doesn't have the entry
 
 ### Hapsing API (Audio)
 - Endpoint: `https://hapsing.ithuan.tw/bangtsam?taibun={tailo_text}`
@@ -302,9 +358,10 @@ server: {
 Flask==3.1.2
 flask-cors==6.0.1
 Tau-Phah-Ji-Command==1.0.0
-anthropic==0.39.0
+anthropic>=0.40.0
 python-dotenv==1.0.0
 gunicorn==21.2.0
+pypinyin==0.55.0  # Fallback for Pinyin generation when Claude doesn't provide it
 ```
 
 ### Node.js (package.json)
@@ -324,3 +381,4 @@ gunicorn==21.2.0
   }
 }
 ```
+- number 1 and 2 and 3 and 4

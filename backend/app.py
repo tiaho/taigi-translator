@@ -3,10 +3,9 @@ from flask_cors import CORS
 from tauphahji_cmd import tàuphahjī
 from anthropic import Anthropic
 from dotenv import load_dotenv
+from pypinyin import pinyin, Style
 import os
-import re
 import json
-from functools import lru_cache
 
 # Load environment variables
 load_dotenv()
@@ -26,6 +25,59 @@ CORS(app)
 
 # Simple in-memory cache for audio
 audio_cache = {}
+
+# Character variant mapping (Mandarin → Taiwanese variants)
+CHAR_VARIANTS = {
+    '腳': '跤',  # foot/leg
+    '脚': '跤',  # simplified variant
+}
+
+def normalize_taiwanese_text(text):
+    """Normalize Mandarin characters to Taiwanese variants for dictionary lookup"""
+    result = text
+    for mandarin_char, taiwanese_char in CHAR_VARIANTS.items():
+        result = result.replace(mandarin_char, taiwanese_char)
+    return result
+
+# Load MOE Taiwanese Dictionary on startup
+moe_dict = {}
+try:
+    dict_path = os.path.join(os.path.dirname(__file__), 'moedict-twblg.json')
+    if os.path.exists(dict_path):
+        with open(dict_path, 'r', encoding='utf-8') as f:
+            moe_data = json.load(f)
+
+            # Create lookup dictionary by title and synonyms
+            title_count = 0
+            synonym_count = 0
+
+            for entry in moe_data:
+                title = entry.get('title', '')
+                if title and 'heteronyms' in entry and len(entry['heteronyms']) > 0:
+                    # Get first pronunciation
+                    heteronym = entry['heteronyms'][0]
+                    tailo = heteronym.get('trs', '')
+
+                    if tailo:
+                        # Index by title
+                        moe_dict[title] = tailo
+                        title_count += 1
+
+                        # Also index by synonyms
+                        synonyms = heteronym.get('synonyms', '')
+                        if synonyms:
+                            for synonym in synonyms.split(','):
+                                synonym = synonym.strip()
+                                if synonym and synonym not in moe_dict:
+                                    moe_dict[synonym] = tailo
+                                    synonym_count += 1
+
+        print(f"✅ Loaded MOE Taiwanese Dictionary: {title_count} titles + {synonym_count} synonyms = {len(moe_dict)} total entries")
+    else:
+        print("⚠️  MOE dictionary file not found, using Tau-Phah-Ji only")
+except Exception as e:
+    print(f"⚠️  Error loading MOE dictionary: {e}, using Tau-Phah-Ji only")
+    moe_dict = {}
 
 # Common phrases to pre-cache
 COMMON_PHRASES = [
@@ -74,54 +126,68 @@ else:
 
 def translate_english_to_taiwanese_with_mandarin(english_text):
     """
-    Use Claude API to translate English to both Mandarin and Taiwanese in one call
+    Use Claude API to translate English to Taiwan Mandarin with Taiwan-specific vocabulary,
+    and generate Taiwan-style Pinyin, then treat Mandarin characters as Taiwanese
     """
     if not anthropic_client:
         raise Exception("Claude API key not configured. Please set ANTHROPIC_API_KEY in .env file")
 
     try:
+        # Step 1: English → Taiwan Mandarin + Pinyin (using Claude with Taiwan-specific instructions)
         message = anthropic_client.messages.create(
             model="claude-3-5-haiku-20241022",
-            max_tokens=1000,
+            max_tokens=500,
             messages=[{
                 "role": "user",
-                "content": f"""Translate the following English text to both Mandarin Chinese and Taiwanese Hokkien (台語).
+                "content": f"""Translate to Taiwan Mandarin (台灣華語/國語), using vocabulary commonly used in Taiwan, NOT Mainland China.
 
-Input text: "{english_text}"
+Examples of Taiwan vocabulary preferences:
+- bicycle: 腳踏車 (NOT 自行車)
+- bus: 公車 (NOT 公共汽車)
+- taxi: 計程車 (NOT 出租車)
+- metro/subway: 捷運 (NOT 地鐵)
+- parking lot: 停車場 (NOT 停车场)
+- software: 軟體 (NOT 软件)
+- computer: 電腦 (NOT 计算机)
+
+Input: "{english_text}"
 
 Provide the output in exactly this format:
-MANDARIN: [traditional Chinese characters for Mandarin]
+MANDARIN: [Taiwan Mandarin in traditional characters]
 PINYIN: [Hanyu Pinyin with tone marks]
-TAIWANESE: [traditional Chinese characters for Taiwanese]
 
-Example format:
-MANDARIN: 你好
-PINYIN: nǐ hǎo
-TAIWANESE: 你好
-
-Important: Use traditional Chinese characters (繁體中文/漢字) for both translations."""
+Example:
+MANDARIN: 腳踏車
+PINYIN: jiǎo tà chē"""
             }]
         )
 
         response_text = message.content[0].text.strip()
-        print(f"Translation response: {response_text}")
+        print(f"Claude response: {response_text}")
 
         # Parse the response
         lines = response_text.split('\n')
         mandarin_text = ""
-        pinyin = ""
-        taiwanese_text = ""
+        pinyin_text = ""
 
         for line in lines:
             if line.startswith('MANDARIN:'):
                 mandarin_text = line.replace('MANDARIN:', '').strip()
             elif line.startswith('PINYIN:'):
-                pinyin = line.replace('PINYIN:', '').strip()
-            elif line.startswith('TAIWANESE:'):
-                taiwanese_text = line.replace('TAIWANESE:', '').strip()
+                pinyin_text = line.replace('PINYIN:', '').strip()
 
-        print(f"Translated '{english_text}' to Mandarin '{mandarin_text}' ({pinyin}) and Taiwanese '{taiwanese_text}'")
-        return mandarin_text, pinyin, taiwanese_text
+        # Fallback to pypinyin if Claude didn't provide Pinyin
+        if not pinyin_text and mandarin_text:
+            pinyin_list = pinyin(mandarin_text, style=Style.TONE)
+            pinyin_text = ' '.join([p[0] for p in pinyin_list])
+
+        print(f"Claude (Taiwan Mandarin): '{english_text}' → '{mandarin_text}' ({pinyin_text})")
+
+        # Step 2: Use the same Mandarin characters as "Taiwanese"
+        # (since they share many common characters)
+        taiwanese_text = mandarin_text
+
+        return mandarin_text, pinyin_text, taiwanese_text
 
     except Exception as e:
         print(f"Translation error: {e}")
@@ -187,6 +253,54 @@ Provide ONLY the English translation, with no explanations or additional text. J
         print(f"Translation error: {e}")
         raise
 
+def get_taiwanese_romanization(taiwanese_text):
+    """
+    Get Taiwanese Tâi-lô romanization using MOE dictionary first, then Tau-Phah-Ji as fallback
+    """
+    # Try MOE dictionary first (exact match)
+    if taiwanese_text in moe_dict:
+        print(f"✅ Found in MOE dict: {taiwanese_text} → {moe_dict[taiwanese_text]}")
+        return moe_dict[taiwanese_text], taiwanese_text
+
+    # Try with character normalization (e.g., 腳 → 跤)
+    normalized_text = normalize_taiwanese_text(taiwanese_text)
+    if normalized_text != taiwanese_text and normalized_text in moe_dict:
+        print(f"✅ Found in MOE dict (normalized): {taiwanese_text} → {normalized_text} → {moe_dict[normalized_text]}")
+        return moe_dict[normalized_text], normalized_text
+
+    # Try character-by-character lookup for multi-character phrases
+    if len(taiwanese_text) > 1:
+        parts = []
+        # Use normalized text for lookup
+        lookup_text = normalized_text if normalized_text != taiwanese_text else taiwanese_text
+        for char in lookup_text:
+            if char in moe_dict:
+                parts.append(moe_dict[char])
+            else:
+                # Fallback to Tau-Phah-Ji for this character
+                try:
+                    result = tàuphahjī(char)
+                    kip = result.get('KIP', char)
+                    parts.append(kip)
+                except:
+                    parts.append(char)
+
+        if parts:
+            romanization = ' '.join(parts)
+            print(f"✅ Character-by-character: {taiwanese_text} → {romanization}")
+            return romanization, lookup_text
+
+    # Fallback to Tau-Phah-Ji
+    print(f"ℹ️  Not in MOE dict, using Tau-Phah-Ji: {taiwanese_text}")
+    try:
+        result = tàuphahjī(taiwanese_text)
+        kip_romanization = result.get('KIP', '')
+        han_characters = result.get('漢字', taiwanese_text)
+        return kip_romanization, han_characters
+    except Exception as e:
+        print(f"⚠️  Tau-Phah-Ji failed: {e}")
+        return '', taiwanese_text
+
 def convert_kip_to_tailo(kip_text):
     """
     Convert KIP romanization to Tai-lo
@@ -199,47 +313,20 @@ def convert_kip_to_tailo(kip_text):
 
 def translate_mandarin_to_taiwanese_with_pinyin(mandarin_text):
     """
-    Use Claude API to translate Mandarin to Taiwanese and get Pinyin in one call
+    Generate Pinyin for Mandarin and use same characters as Taiwanese
+    (no Claude API needed)
     """
-    if not anthropic_client:
-        raise Exception("Claude API key not configured. Please set ANTHROPIC_API_KEY in .env file")
-
     try:
-        message = anthropic_client.messages.create(
-            model="claude-3-5-haiku-20241022",
-            max_tokens=1000,
-            messages=[{
-                "role": "user",
-                "content": f"""Given this Mandarin Chinese text, provide both the Hanyu Pinyin and the Taiwanese Hokkien (台語) translation.
+        # Generate Pinyin for the Mandarin text
+        pinyin_list = pinyin(mandarin_text, style=Style.TONE)
+        pinyin_text = ' '.join([p[0] for p in pinyin_list])
+        print(f"Pinyin: {pinyin_text}")
 
-Input text: "{mandarin_text}"
+        # Use the same Mandarin characters as "Taiwanese"
+        taiwanese_text = mandarin_text
 
-Provide the output in exactly this format:
-PINYIN: [Hanyu Pinyin with tone marks]
-TAIWANESE: [traditional Chinese characters for Taiwanese]
-
-Example:
-PINYIN: nǐ hǎo
-TAIWANESE: 你好"""
-            }]
-        )
-
-        response_text = message.content[0].text.strip()
-        print(f"Mandarin to Taiwanese response: {response_text}")
-
-        # Parse the response
-        lines = response_text.split('\n')
-        pinyin = ""
-        taiwanese_text = ""
-
-        for line in lines:
-            if line.startswith('PINYIN:'):
-                pinyin = line.replace('PINYIN:', '').strip()
-            elif line.startswith('TAIWANESE:'):
-                taiwanese_text = line.replace('TAIWANESE:', '').strip()
-
-        print(f"Got Pinyin '{pinyin}' and Taiwanese '{taiwanese_text}' for Mandarin '{mandarin_text}'")
-        return pinyin, taiwanese_text
+        print(f"Got Pinyin '{pinyin_text}' for Mandarin '{mandarin_text}'")
+        return pinyin_text, taiwanese_text
 
     except Exception as e:
         print(f"Translation error: {e}")
@@ -272,13 +359,12 @@ def romanize():
             mandarin_text, pinyin, taiwanese_text = translate_english_to_taiwanese_with_mandarin(text)
             print(f"Got Mandarin '{mandarin_text}' ({pinyin}) and Taiwanese '{taiwanese_text}'")
 
-            # Use TauPhahJi to get romanization
-            result = tàuphahjī(taiwanese_text)
-            print(f"TauPhahJi result: {result}")
+            # Use MOE dictionary + TauPhahJi to get romanization
+            tailo_romanization, han_characters = get_taiwanese_romanization(taiwanese_text)
+            print(f"Romanization result: {tailo_romanization}, Han: {han_characters}")
 
-            # Extract the romanization (KIP format)
-            kip_romanization = result.get('KIP', '')
-            han_characters = result.get('漢字', '')
+            # For backwards compatibility
+            kip_romanization = tailo_romanization
 
             # Convert KIP to Tai-lo
             tailo_romanization = convert_kip_to_tailo(kip_romanization)
@@ -298,13 +384,12 @@ def romanize():
             pinyin, taiwanese_text = translate_mandarin_to_taiwanese_with_pinyin(text)
             print(f"Got Pinyin '{pinyin}' and Taiwanese '{taiwanese_text}'")
 
-            # Use TauPhahJi to get romanization
-            result = tàuphahjī(taiwanese_text)
-            print(f"TauPhahJi result: {result}")
+            # Use MOE dictionary + TauPhahJi to get romanization
+            tailo_romanization, han_characters = get_taiwanese_romanization(taiwanese_text)
+            print(f"Romanization result: {tailo_romanization}, Han: {han_characters}")
 
-            # Extract the romanization (KIP format)
-            kip_romanization = result.get('KIP', '')
-            han_characters = result.get('漢字', '')
+            # For backwards compatibility
+            kip_romanization = tailo_romanization
 
             # Convert KIP to Tai-lo
             tailo_romanization = convert_kip_to_tailo(kip_romanization)
@@ -323,13 +408,12 @@ def romanize():
             english_text = translate_taiwanese_to_english(text)
             print(f"Translation result: {english_text}")
 
-            # Also romanize the Taiwanese text
-            result = tàuphahjī(text)
-            print(f"TauPhahJi result: {result}")
+            # Romanize the Taiwanese text using MOE dictionary + Tau-Phah-Ji
+            tailo_romanization, han_characters = get_taiwanese_romanization(text)
+            print(f"Romanization result: {tailo_romanization}, Han: {han_characters}")
 
-            # Extract the romanization (KIP format)
-            kip_romanization = result.get('KIP', '')
-            han_characters = result.get('漢字', '')
+            # For backwards compatibility
+            kip_romanization = tailo_romanization
 
             # Convert KIP to Tai-lo
             tailo_romanization = convert_kip_to_tailo(kip_romanization)
@@ -370,57 +454,66 @@ def romanize_stream():
             yield f"data: {json.dumps({'status': 'translating', 'stage': 'started'})}\n\n"
 
             if source_language == 'english':
-                # English to Taiwanese with streaming
+                # English to Taiwanese (using Claude for Taiwan Mandarin + Pinyin + Tau-Phah-Ji)
                 yield f"data: {json.dumps({'status': 'translating', 'stage': 'mandarin'})}\n\n"
 
-                # Stream the translation
-                mandarin_text = ""
-                pinyin = ""
-                taiwanese_text = ""
-
+                # Use Claude with Taiwan-specific vocabulary to get both Mandarin and Pinyin
                 with anthropic_client.messages.stream(
                     model="claude-3-5-haiku-20241022",
-                    max_tokens=1000,
+                    max_tokens=500,
                     messages=[{
                         "role": "user",
-                        "content": f"""Translate the following English text to both Mandarin Chinese and Taiwanese Hokkien (台語).
+                        "content": f"""Translate to Taiwan Mandarin (台灣華語/國語), using vocabulary commonly used in Taiwan, NOT Mainland China.
 
-Input text: "{text}"
+Examples of Taiwan vocabulary preferences:
+- bicycle: 腳踏車 (NOT 自行車)
+- bus: 公車 (NOT 公共汽車)
+- taxi: 計程車 (NOT 出租車)
+- metro/subway: 捷運 (NOT 地鐵)
+- parking lot: 停車場 (NOT 停车场)
+- software: 軟體 (NOT 软件)
+- computer: 電腦 (NOT 计算机)
+
+Input: "{text}"
 
 Provide the output in exactly this format:
-MANDARIN: [traditional Chinese characters for Mandarin]
+MANDARIN: [Taiwan Mandarin in traditional characters]
 PINYIN: [Hanyu Pinyin with tone marks]
-TAIWANESE: [traditional Chinese characters for Taiwanese]
 
-Example format:
-MANDARIN: 你好
-PINYIN: nǐ hǎo
-TAIWANESE: 你好
-
-Important: Use traditional Chinese characters (繁體中文/漢字) for both translations."""
+Example:
+MANDARIN: 腳踏車
+PINYIN: jiǎo tà chē"""
                     }]
                 ) as stream:
                     response_text = ""
                     for text_chunk in stream.text_stream:
                         response_text += text_chunk
-                        # Send partial update
                         yield f"data: {json.dumps({'status': 'streaming', 'partial': response_text})}\n\n"
 
-                # Parse the complete response
+                response_text = response_text.strip()
+
+                # Parse the response
                 lines = response_text.split('\n')
+                mandarin_text = ""
+                pinyin_text = ""
+
                 for line in lines:
                     if line.startswith('MANDARIN:'):
                         mandarin_text = line.replace('MANDARIN:', '').strip()
                     elif line.startswith('PINYIN:'):
-                        pinyin = line.replace('PINYIN:', '').strip()
-                    elif line.startswith('TAIWANESE:'):
-                        taiwanese_text = line.replace('TAIWANESE:', '').strip()
+                        pinyin_text = line.replace('PINYIN:', '').strip()
 
-                # Get romanization
-                result = tàuphahjī(taiwanese_text)
-                kip_romanization = result.get('KIP', '')
-                han_characters = result.get('漢字', '')
-                tailo_romanization = convert_kip_to_tailo(kip_romanization)
+                # Fallback to pypinyin if Claude didn't provide Pinyin
+                if not pinyin_text and mandarin_text:
+                    pinyin_list = pinyin(mandarin_text, style=Style.TONE)
+                    pinyin_text = ' '.join([p[0] for p in pinyin_list])
+
+                # Use same characters as Taiwanese
+                taiwanese_text = mandarin_text
+
+                # Get romanization from MOE dictionary + Tau-Phah-Ji
+                tailo_romanization, han_characters = get_taiwanese_romanization(taiwanese_text)
+                kip_romanization = tailo_romanization
 
                 # Send final result
                 final_data = {
@@ -428,7 +521,7 @@ Important: Use traditional Chinese characters (繁體中文/漢字) for both tra
                     'success': True,
                     'translation': taiwanese_text,
                     'mandarin': mandarin_text,
-                    'pinyin': pinyin,
+                    'pinyin': pinyin_text,
                     'romanization': tailo_romanization,
                     'hanCharacters': han_characters,
                     'kip': kip_romanization
@@ -436,54 +529,27 @@ Important: Use traditional Chinese characters (繁體中文/漢字) for both tra
                 yield f"data: {json.dumps(final_data)}\n\n"
 
             elif source_language == 'mandarin':
-                # Mandarin to Taiwanese with streaming
+                # Mandarin to Taiwanese (using pypinyin + Tau-Phah-Ji)
                 yield f"data: {json.dumps({'status': 'translating', 'stage': 'taiwanese'})}\n\n"
 
-                pinyin = ""
-                taiwanese_text = ""
+                # Generate Pinyin
+                pinyin_list = pinyin(text, style=Style.TONE)
+                pinyin_text = ' '.join([p[0] for p in pinyin_list])
 
-                with anthropic_client.messages.stream(
-                    model="claude-3-5-haiku-20241022",
-                    max_tokens=1000,
-                    messages=[{
-                        "role": "user",
-                        "content": f"""Given this Mandarin Chinese text, provide both the Hanyu Pinyin and the Taiwanese Hokkien (台語) translation.
+                # Use same characters as Taiwanese
+                taiwanese_text = text
 
-Input text: "{text}"
+                yield f"data: {json.dumps({'status': 'streaming', 'partial': f'PINYIN: {pinyin_text}\\nTAIWANESE: {taiwanese_text}'})}\n\n"
 
-Provide the output in exactly this format:
-PINYIN: [Hanyu Pinyin with tone marks]
-TAIWANESE: [traditional Chinese characters for Taiwanese]
-
-Example:
-PINYIN: nǐ hǎo
-TAIWANESE: 你好"""
-                    }]
-                ) as stream:
-                    response_text = ""
-                    for text_chunk in stream.text_stream:
-                        response_text += text_chunk
-                        yield f"data: {json.dumps({'status': 'streaming', 'partial': response_text})}\n\n"
-
-                # Parse response
-                lines = response_text.split('\n')
-                for line in lines:
-                    if line.startswith('PINYIN:'):
-                        pinyin = line.replace('PINYIN:', '').strip()
-                    elif line.startswith('TAIWANESE:'):
-                        taiwanese_text = line.replace('TAIWANESE:', '').strip()
-
-                # Get romanization
-                result = tàuphahjī(taiwanese_text)
-                kip_romanization = result.get('KIP', '')
-                han_characters = result.get('漢字', '')
-                tailo_romanization = convert_kip_to_tailo(kip_romanization)
+                # Get romanization from MOE dictionary + Tau-Phah-Ji
+                tailo_romanization, han_characters = get_taiwanese_romanization(taiwanese_text)
+                kip_romanization = tailo_romanization
 
                 final_data = {
                     'status': 'complete',
                     'success': True,
                     'translation': taiwanese_text,
-                    'pinyin': pinyin,
+                    'pinyin': pinyin_text,
                     'romanization': tailo_romanization,
                     'hanCharacters': han_characters,
                     'kip': kip_romanization
