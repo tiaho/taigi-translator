@@ -657,7 +657,13 @@ export default function TaiwaneseTranslator() {
       back, // Taiwanese
       tailo,
       mandarin,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      // SRS fields
+      lastReviewedAt: null,
+      nextReviewAt: new Date().toISOString(), // Due immediately
+      interval: 0, // Days
+      reviewCount: 0,
+      status: 'learning' // learning, known, mastered
     };
 
     const updatedFlashcards = [...flashcards, newCard];
@@ -723,6 +729,133 @@ export default function TaiwaneseTranslator() {
   const prevCard = () => {
     setIsCardFlipped(false);
     setCurrentCardIndex((prev) => (prev - 1 + flashcards.length) % flashcards.length);
+  };
+
+  // SRS: Review a card with difficulty rating
+  const reviewCard = (difficulty) => {
+    const card = flashcards[currentCardIndex];
+    if (!card) return;
+
+    const now = new Date();
+    let newInterval = card.interval || 0;
+    let newStatus = card.status;
+
+    // SRS Algorithm (simplified SM-2)
+    if (difficulty === 'hard') {
+      newInterval = Math.max(1, Math.floor(newInterval * 0.5)); // Reduce interval
+      newStatus = 'learning';
+    } else if (difficulty === 'good') {
+      if (newInterval === 0) {
+        newInterval = 1; // First review: 1 day
+      } else if (newInterval === 1) {
+        newInterval = 3; // Second review: 3 days
+      } else {
+        newInterval = Math.floor(newInterval * 2); // Double the interval
+      }
+
+      if (newInterval >= 7) newStatus = 'known';
+      if (newInterval >= 21) newStatus = 'mastered';
+    } else if (difficulty === 'easy') {
+      if (newInterval === 0) {
+        newInterval = 4; // Skip ahead
+      } else {
+        newInterval = Math.floor(newInterval * 2.5);
+      }
+
+      if (newInterval >= 7) newStatus = 'known';
+      if (newInterval >= 21) newStatus = 'mastered';
+    }
+
+    // Calculate next review date
+    const nextReview = new Date(now);
+    nextReview.setDate(nextReview.getDate() + newInterval);
+
+    // Update card
+    const updatedCard = {
+      ...card,
+      lastReviewedAt: now.toISOString(),
+      nextReviewAt: nextReview.toISOString(),
+      interval: newInterval,
+      reviewCount: (card.reviewCount || 0) + 1,
+      status: newStatus
+    };
+
+    const updatedFlashcards = [...flashcards];
+    updatedFlashcards[currentCardIndex] = updatedCard;
+    setFlashcards(updatedFlashcards);
+
+    // Save to localStorage
+    try {
+      localStorage.setItem('flashcards', JSON.stringify(updatedFlashcards));
+      console.log(`✅ Reviewed card: ${difficulty} (next review in ${newInterval} days)`);
+    } catch (e) {
+      console.error('Error saving review:', e);
+    }
+
+    // Move to next card
+    nextCard();
+  };
+
+  // Get cards due for review
+  const getDueCards = () => {
+    const now = new Date();
+    return flashcards.filter(card => {
+      if (!card.nextReviewAt) return true; // New cards
+      return new Date(card.nextReviewAt) <= now;
+    });
+  };
+
+  // Play audio for flashcard Taiwanese side
+  const playFlashcardAudio = async (tailo) => {
+    if (!tailo) return;
+
+    setAudioError('');
+    setIsSpeaking(true);
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const audioUrl = `${apiUrl}/api/audio?taibun=${encodeURIComponent(tailo)}`;
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+      const response = await fetch(audioUrl, {
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch audio: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      if (blob.size === 0) {
+        throw new Error('Received empty audio file');
+      }
+
+      const blobUrl = URL.createObjectURL(blob);
+
+      if (audioRef.current) {
+        audioRef.current.src = blobUrl;
+        audioRef.current.load();
+
+        await new Promise((resolve, reject) => {
+          audioRef.current.onloadeddata = resolve;
+          audioRef.current.onerror = reject;
+        });
+
+        await audioRef.current.play();
+      }
+    } catch (error) {
+      console.error('Flashcard audio error:', error);
+      if (error.name === 'AbortError') {
+        setAudioError('Audio request timed out');
+      } else {
+        setAudioError(`Failed to load audio: ${error.message}`);
+      }
+      setIsSpeaking(false);
+    }
   };
 
   const generateCustomVocab = async () => {
@@ -1300,6 +1433,11 @@ export default function TaiwaneseTranslator() {
               <span className="font-medium text-gray-800">
                 Flashcards {flashcards.length > 0 && `(${flashcards.length})`}
               </span>
+              {flashcards.length > 0 && (
+                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
+                  {getDueCards().length} due
+                </span>
+              )}
             </div>
             <span className="text-gray-400">{showFlashcards ? '−' : '+'}</span>
           </button>
@@ -1335,11 +1473,31 @@ export default function TaiwaneseTranslator() {
                     </button>
                   </div>
 
-                  {/* Card Counter */}
+                  {/* Card Counter and Status */}
                   <div className="text-center mb-4">
-                    <span className="text-sm font-medium text-gray-600">
-                      Card {currentCardIndex + 1} of {flashcards.length}
-                    </span>
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <span className="text-sm font-medium text-gray-600">
+                        Card {currentCardIndex + 1} of {flashcards.length}
+                      </span>
+                      {flashcards[currentCardIndex]?.status && (
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          flashcards[currentCardIndex].status === 'mastered'
+                            ? 'bg-green-100 text-green-700'
+                            : flashcards[currentCardIndex].status === 'known'
+                            ? 'bg-blue-100 text-blue-700'
+                            : 'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {flashcards[currentCardIndex].status === 'mastered' ? '⭐ Mastered'
+                            : flashcards[currentCardIndex].status === 'known' ? '✓ Known'
+                            : '📚 Learning'}
+                        </span>
+                      )}
+                    </div>
+                    {flashcards[currentCardIndex]?.nextReviewAt && (
+                      <p className="text-xs text-gray-500">
+                        Next review: {new Date(flashcards[currentCardIndex].nextReviewAt).toLocaleDateString()}
+                      </p>
+                    )}
                   </div>
 
                   {/* Flashcard Display */}
@@ -1393,6 +1551,62 @@ export default function TaiwaneseTranslator() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Audio Playback Button */}
+                  {flashcards[currentCardIndex]?.tailo && (
+                    <div className="mb-4">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          playFlashcardAudio(flashcards[currentCardIndex].tailo);
+                        }}
+                        disabled={isSpeaking}
+                        className={`w-full p-2 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm ${
+                          isSpeaking
+                            ? 'bg-green-400 cursor-not-allowed'
+                            : 'bg-green-600 hover:bg-green-700'
+                        } text-white`}
+                      >
+                        <Volume2 className={`w-4 h-4 ${isSpeaking ? 'animate-pulse' : ''}`} />
+                        <span className="font-medium">
+                          {isSpeaking ? '⏳ Loading audio...' : 'Play Taiwanese Audio'}
+                        </span>
+                      </button>
+                      {audioError && (
+                        <p className="text-xs text-red-600 text-center mt-1">{audioError}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* SRS Review Buttons - Show after flipping */}
+                  {isCardFlipped && (
+                    <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200">
+                      <p className="text-xs text-gray-600 mb-2 text-center">How well did you know this?</p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => reviewCard('hard')}
+                          className="flex-1 py-2 px-3 bg-red-500 text-white rounded-lg font-medium text-sm hover:bg-red-600 transition-colors"
+                        >
+                          😓 Hard
+                          <span className="block text-xs opacity-75">Review soon</span>
+                        </button>
+                        <button
+                          onClick={() => reviewCard('good')}
+                          className="flex-1 py-2 px-3 bg-blue-500 text-white rounded-lg font-medium text-sm hover:bg-blue-600 transition-colors"
+                        >
+                          😊 Good
+                          <span className="block text-xs opacity-75">Standard</span>
+                        </button>
+                        <button
+                          onClick={() => reviewCard('easy')}
+                          className="flex-1 py-2 px-3 bg-green-500 text-white rounded-lg font-medium text-sm hover:bg-green-600 transition-colors"
+                        >
+                          😄 Easy
+                          <span className="block text-xs opacity-75">Review later</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Navigation Buttons */}
                   <div className="flex gap-2 mb-4">
