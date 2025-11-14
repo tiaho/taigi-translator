@@ -561,7 +561,8 @@ Output ONLY the three lines (MANDARIN, TAIWANESE, PINYIN)."""
                 # Use same characters as Taiwanese
                 taiwanese_text = text
 
-                yield f"data: {json.dumps({'status': 'streaming', 'partial': f'PINYIN: {pinyin_text}\\nTAIWANESE: {taiwanese_text}'})}\n\n"
+                partial_text = f'PINYIN: {pinyin_text}\nTAIWANESE: {taiwanese_text}'
+                yield f"data: {json.dumps({'status': 'streaming', 'partial': partial_text})}\n\n"
 
                 # Get romanization from MOE dictionary + Tau-Phah-Ji
                 tailo_romanization, han_characters = get_taiwanese_romanization(taiwanese_text)
