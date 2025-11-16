@@ -1104,15 +1104,16 @@ Now generate a complete module for "{theme}". Make the dialogue realistic and na
 
         # Process vocabulary: use Mandarin characters as Taiwanese, then romanize with word lookup
         # (Same logic as translate_english_to_taiwanese_with_mandarin line 209)
-        print("📚 Processing vocabulary: using Mandarin characters as Taiwanese, then romanizing with word lookup...")
-        for word in module['vocabulary']:
+        vocab_total = len(module['vocabulary'])
+        print(f"📚 Processing vocabulary: using Mandarin characters as Taiwanese, then romanizing with word lookup...")
+        for idx, word in enumerate(module['vocabulary'], 1):
             mandarin_text = word['mandarin']
 
             # Use same Mandarin characters as "Taiwanese", with normalization (嗎 → 無, 腳 → 跤, etc.)
             taiwanese_text = normalize_taiwanese_text(mandarin_text)
             word['han'] = taiwanese_text
 
-            print(f"  {word['en']}: {mandarin_text} → {taiwanese_text}")
+            print(f"  [{idx}/{vocab_total}] {word['en']}: {mandarin_text} → {taiwanese_text}")
 
             # Romanize using intelligent word lookup (tries whole word, segments if needed, looks up in MOE dict)
             tailo = romanize_sentence_with_word_lookup(taiwanese_text)
@@ -1121,15 +1122,16 @@ Now generate a complete module for "{theme}". Make the dialogue realistic and na
 
         # Process dialogue: use Mandarin characters as Taiwanese, then romanize with intelligent word lookup
         # (Same logic as translate_english_to_taiwanese_with_mandarin line 209)
-        print("💬 Processing dialogue: using Mandarin characters as Taiwanese, then romanizing with word lookup...")
-        for line in module['dialogue']:
+        dialogue_total = len(module['dialogue'])
+        print(f"💬 Processing dialogue: using Mandarin characters as Taiwanese, then romanizing with word lookup...")
+        for idx, line in enumerate(module['dialogue'], 1):
             mandarin_text = line['mandarin']
 
             # Use same Mandarin characters as "Taiwanese", with normalization (嗎 → 無, 腳 → 跤, etc.)
             taiwanese_text = normalize_taiwanese_text(mandarin_text)
             line['taiwanese'] = taiwanese_text
 
-            print(f"  {mandarin_text} → {taiwanese_text}")
+            print(f"  [{idx}/{dialogue_total}] {mandarin_text} → {taiwanese_text}")
 
             # Romanize using intelligent word lookup (tries whole sentence, then common splits, then TauPhahJi)
             tailo = romanize_sentence_with_word_lookup(taiwanese_text)
@@ -1146,6 +1148,182 @@ Now generate a complete module for "{theme}". Make the dialogue realistic and na
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/generate-module-stream', methods=['POST'])
+def generate_module_stream():
+    """
+    Generate a learning module with real-time progress updates via Server-Sent Events
+    """
+    def generate():
+        try:
+            data = request.json
+            theme = data.get('theme', '')
+
+            if not theme:
+                yield f"data: {json.dumps({'error': 'No theme provided'})}\n\n"
+                return
+
+            if not anthropic_client:
+                yield f"data: {json.dumps({'error': 'Claude API not configured'})}\n\n"
+                return
+
+            yield f"data: {json.dumps({'type': 'status', 'message': 'Generating module content...'})}\n\n"
+
+            # Generate module with Claude (same prompt as generate_module)
+            message = anthropic_client.messages.create(
+                model="claude-3-5-haiku-20241022",
+                max_tokens=4000,
+                messages=[{
+                    "role": "user",
+                    "content": f"""Generate a Taiwanese language learning module for the theme "{theme}".
+
+Create a comprehensive lesson with the following sections:
+
+1. TITLE: A short descriptive title (in English)
+2. DESCRIPTION: A brief 1-2 sentence description
+3. CULTURAL_NOTE: 2-3 sentences about cultural context
+4. VOCABULARY: 10-12 essential words for this theme
+5. DIALOGUE: A 10-line natural conversation using this vocabulary
+
+IMPORTANT VOCABULARY GUIDELINES:
+- Use PRECISE, STANDARD vocabulary (not colloquial alternatives)
+- Use Taiwan Mandarin vocabulary (腳踏車 not 自行車, 醫生 not 大夫)
+- Choose the most accurate word for the meaning:
+  * For "sick": use 生病 (not 不舒服 which means "uncomfortable")
+  * For "painful": use 痛 (not 疼)
+  * For medical/formal contexts: use standard medical terms
+- Avoid overly casual or vague alternatives
+
+Format EXACTLY as follows (NOTE: Only generate English and Taiwan Mandarin):
+
+TITLE: [Short title]
+
+DESCRIPTION: [1-2 sentence description]
+
+CULTURAL_NOTE: [2-3 sentences about cultural context]
+
+VOCABULARY:
+WORD:
+EN: [English word - be precise]
+ZH: [Precise Taiwan Mandarin translation with traditional characters]
+[Repeat for 10-12 words]
+
+DIALOGUE:
+LINE:
+EN: [English sentence]
+ZH: [Taiwan Mandarin translation - use precise vocabulary]
+[Repeat for exactly 10 lines - make it a natural conversation]
+
+Example for "At the Restaurant":
+VOCABULARY:
+WORD:
+EN: Menu
+ZH: 菜單
+WORD:
+EN: Order
+ZH: 點菜
+
+DIALOGUE:
+LINE:
+EN: Welcome! Please have a seat.
+ZH: 歡迎光臨！請坐。
+LINE:
+EN: Here's the menu.
+ZH: 這是菜單。
+
+Now generate a complete module for "{theme}". Make the dialogue realistic and natural."""
+                }]
+            )
+
+            response_text = message.content[0].text.strip()
+
+            # Parse module (same logic as generate_module)
+            module = {
+                'title': '',
+                'description': '',
+                'culturalNote': '',
+                'vocabulary': [],
+                'dialogue': []
+            }
+
+            lines = response_text.split('\n')
+            current_section = None
+            current_word = {}
+            current_line = {}
+
+            for line in lines:
+                line_stripped = line.strip()
+
+                if line_stripped.startswith('TITLE:'):
+                    module['title'] = line_stripped.replace('TITLE:', '').strip()
+                elif line_stripped.startswith('DESCRIPTION:'):
+                    module['description'] = line_stripped.replace('DESCRIPTION:', '').strip()
+                elif line_stripped.startswith('CULTURAL_NOTE:'):
+                    module['culturalNote'] = line_stripped.replace('CULTURAL_NOTE:', '').strip()
+                elif line_stripped == 'VOCABULARY:':
+                    current_section = 'vocabulary'
+                elif line_stripped == 'DIALOGUE:':
+                    current_section = 'dialogue'
+                elif line_stripped == 'WORD:':
+                    current_word = {}
+                elif line_stripped == 'LINE:':
+                    current_line = {}
+                elif line_stripped.startswith('EN:'):
+                    value = line_stripped.replace('EN:', '').strip()
+                    if current_section == 'vocabulary':
+                        current_word['en'] = value
+                    elif current_section == 'dialogue':
+                        current_line['english'] = value
+                elif line_stripped.startswith('ZH:'):
+                    value = line_stripped.replace('ZH:', '').strip()
+                    if current_section == 'vocabulary':
+                        current_word['mandarin'] = value
+                        if current_word.get('en') and current_word.get('mandarin'):
+                            module['vocabulary'].append(current_word.copy())
+                    elif current_section == 'dialogue':
+                        current_line['mandarin'] = value
+                        if current_line.get('english') and current_line.get('mandarin'):
+                            module['dialogue'].append(current_line.copy())
+
+            if not module['title'] or len(module['dialogue']) < 5:
+                yield f"data: {json.dumps({'error': 'Failed to generate complete module'})}\n\n"
+                return
+
+            vocab_total = len(module['vocabulary'])
+            dialogue_total = len(module['dialogue'])
+
+            # Send initial totals
+            yield f"data: {json.dumps({'type': 'totals', 'vocab_total': vocab_total, 'dialogue_total': dialogue_total})}\n\n"
+
+            # Process vocabulary with progress updates
+            for idx, word in enumerate(module['vocabulary'], 1):
+                mandarin_text = word['mandarin']
+                taiwanese_text = normalize_taiwanese_text(mandarin_text)
+                word['han'] = taiwanese_text
+                tailo = romanize_sentence_with_word_lookup(taiwanese_text)
+                word['tailo'] = tailo
+
+                # Send progress update
+                yield f"data: {json.dumps({'type': 'progress', 'vocab_current': idx, 'vocab_total': vocab_total, 'dialogue_current': 0, 'dialogue_total': dialogue_total})}\n\n"
+
+            # Process dialogue with progress updates
+            for idx, line in enumerate(module['dialogue'], 1):
+                mandarin_text = line['mandarin']
+                taiwanese_text = normalize_taiwanese_text(mandarin_text)
+                line['taiwanese'] = taiwanese_text
+                tailo = romanize_sentence_with_word_lookup(taiwanese_text)
+                line['tailo'] = tailo
+
+                # Send progress update
+                yield f"data: {json.dumps({'type': 'progress', 'vocab_current': vocab_total, 'vocab_total': vocab_total, 'dialogue_current': idx, 'dialogue_total': dialogue_total})}\n\n"
+
+            # Send complete module
+            yield f"data: {json.dumps({'type': 'complete', 'module': module})}\n\n"
+
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
+
+    return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
 @app.route('/api/health', methods=['GET'])
 def health():

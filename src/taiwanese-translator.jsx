@@ -1040,9 +1040,8 @@ export default function TaiwaneseTranslator() {
     try {
       const apiUrl = import.meta.env.VITE_API_URL || '';
 
-      // Start generating
-      setGenerationStatus('🤖 Generating vocabulary and dialogue...');
-      const response = await fetch(`${apiUrl}/api/generate-module`, {
+      // Use fetch with streaming for real-time progress updates (EventSource doesn't support POST)
+      const response = await fetch(`${apiUrl}/api/generate-module-stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1056,41 +1055,74 @@ export default function TaiwaneseTranslator() {
         throw new Error(`Failed to generate module: ${response.status}`);
       }
 
-      setGenerationStatus('📚 Processing translations...');
-      const result = await response.json();
-      console.log('Generated module:', result);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let vocabCurrent = 0;
+      let vocabTotal = 0;
+      let dialogueCurrent = 0;
+      let dialogueTotal = 0;
 
-      if (result.success && result.module) {
-        setGenerationStatus('✅ Module ready!');
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-        // Add to learning modules list
-        const newModule = {
-          ...result.module,
-          id: Date.now(),
-          createdAt: new Date().toISOString()
-        };
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop() || ''; // Keep the last incomplete line in buffer
 
-        const updatedModules = [...learningModules, newModule];
-        setLearningModules(updatedModules);
+        for (const line of lines) {
+          if (!line.trim() || !line.startsWith('data: ')) continue;
 
-        // Save to localStorage
-        try {
-          localStorage.setItem('learningModules', JSON.stringify(updatedModules));
-          console.log('✅ Saved learning module to localStorage');
-        } catch (e) {
-          console.error('Error saving to localStorage:', e);
+          try {
+            const data = JSON.parse(line.substring(6)); // Remove 'data: ' prefix
+
+            if (data.type === 'status') {
+              setGenerationStatus(`🤖 ${data.message}`);
+            } else if (data.type === 'totals') {
+              vocabTotal = data.vocab_total;
+              dialogueTotal = data.dialogue_total;
+              setGenerationStatus(`🤖 Generating vocabulary (0/${vocabTotal}) and dialogue (0/${dialogueTotal})...`);
+            } else if (data.type === 'progress') {
+              vocabCurrent = data.vocab_current;
+              dialogueCurrent = data.dialogue_current;
+              setGenerationStatus(`🤖 Generating vocabulary (${vocabCurrent}/${vocabTotal}) and dialogue (${dialogueCurrent}/${dialogueTotal})...`);
+            } else if (data.type === 'complete') {
+              setGenerationStatus('✅ Module ready!');
+
+              // Add to learning modules list
+              const newModule = {
+                ...data.module,
+                id: Date.now(),
+                createdAt: new Date().toISOString()
+              };
+
+              const updatedModules = [...learningModules, newModule];
+              setLearningModules(updatedModules);
+
+              // Save to localStorage
+              try {
+                localStorage.setItem('learningModules', JSON.stringify(updatedModules));
+                console.log('✅ Saved learning module to localStorage');
+              } catch (e) {
+                console.error('Error saving to localStorage:', e);
+              }
+
+              // Select the new module
+              setSelectedModule(newModule);
+
+              // Clear input
+              setCustomTheme('');
+
+              // Clear status after a moment
+              setTimeout(() => setGenerationStatus(''), 2000);
+            } else if (data.type === 'error' || data.error) {
+              throw new Error(data.error || 'Unknown error occurred');
+            }
+          } catch (parseError) {
+            console.error('Error parsing SSE data:', parseError, line);
+          }
         }
-
-        // Select the new module
-        setSelectedModule(newModule);
-
-        // Clear input
-        setCustomTheme('');
-
-        // Clear status after a moment
-        setTimeout(() => setGenerationStatus(''), 2000);
-      } else {
-        alert('Failed to generate learning module. Please try again.');
       }
     } catch (error) {
       console.error('Error generating module:', error);
