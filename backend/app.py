@@ -826,7 +826,7 @@ Create a comprehensive lesson with the following sections:
 4. VOCABULARY: 10-12 essential words for this theme
 5. DIALOGUE: A 10-line natural conversation using this vocabulary
 
-Format EXACTLY as follows (NOTE: Do NOT include TAILO, it will be generated separately):
+Format EXACTLY as follows (NOTE: Only generate English and Taiwan Mandarin):
 
 TITLE: [Short title]
 
@@ -837,15 +837,13 @@ CULTURAL_NOTE: [2-3 sentences about cultural context]
 VOCABULARY:
 WORD:
 EN: [English]
-ZH: [Taiwan Mandarin with traditional characters - use Taiwan vocabulary like 腳踏車, not China Mandarin]
-TW: [Taiwanese with traditional characters]
+ZH: [Taiwan Mandarin with traditional characters - use Taiwan vocabulary like 腳踏車, 醫生, not China Mandarin like 自行車, 大夫]
 [Repeat for 10-12 words]
 
 DIALOGUE:
 LINE:
 EN: [English]
 ZH: [Taiwan Mandarin - use Taiwan vocabulary]
-TW: [Taiwanese]
 [Repeat for exactly 10 lines - make it a natural conversation]
 
 Example for "At the Restaurant":
@@ -859,23 +857,19 @@ VOCABULARY:
 WORD:
 EN: Menu
 ZH: 菜單
-TW: 菜單
 
 WORD:
 EN: Delicious
 ZH: 好吃
-TW: 好食
 
 DIALOGUE:
 LINE:
 EN: Excuse me, can I see the menu?
 ZH: 不好意思，可以看菜單嗎？
-TW: 歹勢，會使看菜單無？
 
 LINE:
 EN: I want beef noodles.
 ZH: 我要牛肉麵。
-TW: 我欲牛肉麵。
 
 Now generate a complete module for "{theme}". Make the dialogue realistic and natural:"""
             }]
@@ -926,20 +920,14 @@ Now generate a complete module for "{theme}". Make the dialogue realistic and na
                 value = line_stripped.replace('ZH:', '').strip()
                 if current_section == 'vocabulary':
                     current_word['mandarin'] = value
-                elif current_section == 'dialogue':
-                    current_line['mandarin'] = value
-            elif line_stripped.startswith('TW:'):
-                value = line_stripped.replace('TW:', '').strip()
-                if current_section == 'vocabulary':
-                    current_word['han'] = value
-                    # Word is complete (no TAILO in Claude response)
-                    if all(key in current_word for key in ['en', 'mandarin', 'han']):
+                    # Word is complete (Claude only generates EN and ZH)
+                    if all(key in current_word for key in ['en', 'mandarin']):
                         module['vocabulary'].append(current_word.copy())
                         current_word = {}
                 elif current_section == 'dialogue':
-                    current_line['taiwanese'] = value
-                    # Line is complete (no TAILO in Claude response)
-                    if all(key in current_line for key in ['en', 'mandarin', 'taiwanese']):
+                    current_line['mandarin'] = value
+                    # Line is complete (Claude only generates EN and ZH)
+                    if all(key in current_line for key in ['en', 'mandarin']):
                         module['dialogue'].append(current_line.copy())
                         current_line = {}
 
@@ -949,17 +937,25 @@ Now generate a complete module for "{theme}". Make the dialogue realistic and na
 
         print(f"✅ Generated module: {module['title']} with {len(module['vocabulary'])} words and {len(module['dialogue'])} dialogue lines")
 
-        # Now romanize all Taiwanese text using MOE Dictionary pipeline
-        print("📚 Romanizing vocabulary using MOE Dictionary pipeline...")
+        # Use Mandarin as Taiwanese (existing pipeline behavior) and romanize using MOE Dictionary
+        print("📚 Processing vocabulary: using Mandarin as Taiwanese, then romanizing via MOE Dictionary...")
         for word in module['vocabulary']:
-            taiwanese_text = word['han']
+            # Use Mandarin text as Taiwanese (same as existing pipeline)
+            taiwanese_text = word['mandarin']
+            word['han'] = taiwanese_text
+
+            # Romanize using MOE Dictionary pipeline
             tailo, _ = get_taiwanese_romanization(taiwanese_text)
             word['tailo'] = tailo
-            print(f"  {taiwanese_text} → {tailo}")
+            print(f"  {word['en']}: {taiwanese_text} → {tailo}")
 
-        print("💬 Romanizing dialogue using MOE Dictionary pipeline...")
+        print("💬 Processing dialogue: using Mandarin as Taiwanese, then romanizing via MOE Dictionary...")
         for line in module['dialogue']:
-            taiwanese_text = line['taiwanese']
+            # Use Mandarin text as Taiwanese (same as existing pipeline)
+            taiwanese_text = line['mandarin']
+            line['taiwanese'] = taiwanese_text
+
+            # Romanize using MOE Dictionary pipeline
             tailo, _ = get_taiwanese_romanization(taiwanese_text)
             line['tailo'] = tailo
             print(f"  {taiwanese_text} → {tailo}")
