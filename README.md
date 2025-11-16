@@ -4,17 +4,40 @@ A React-based web application for romanizing Taiwanese text, featuring Tâi-lô 
 
 ## Features
 
+### Translation & Romanization
 - 🔄 **Dual Translation**: English → BOTH Taiwan Mandarin (國語) AND Taiwanese (台語) using Claude API
   - Taiwan Mandarin: 腳踏車, 很好, 吃飯 (Taiwan-specific vocabulary, not China Mandarin)
   - Taiwanese: 跤踏車, 真好/誠好/足好, 食飯 (authentic Taiwanese vocabulary)
-- 📝 Taiwanese text to Tâi-lô (Tai-lo) romanization using MOE Dictionary + TauPhahJi
-- 📚 Taiwan Ministry of Education Dictionary integration (16,579 entries: 14,489 titles + 4,329 synonyms)
-- 🔍 Definition search: Finds Mandarin words (like 很) by searching dictionary definitions
-- 🔤 Character variant normalization (Mandarin → Taiwanese: 腳 → 跤)
-- 🔊 Authentic Taiwanese audio pronunciation via Hapsing API
-- 💬 Pre-loaded common phrases with audio
-- 🌐 Clean, modern UI with Tailwind CSS
-- 🐍 Python backend with MOE Dictionary, TauPhahJi-Command, and Claude API
+- 📝 **Advanced Romanization**: Multi-tier Tâi-lô romanization system
+  - MOE Dictionary exact match
+  - AI-powered heteronym disambiguation (e.g., 看 → khuànn vs khàn based on context)
+  - Character variant normalization (Mandarin → Taiwanese: 腳 → 跤)
+  - Automatic number conversion (22 → 二十二 → jī-tsa̍p-jī)
+  - TauPhahJi fallback for comprehensive coverage
+- 📚 **Taiwan MOE Dictionary**: 16,579 entries (14,489 titles + 4,329 synonyms)
+- 🔍 **Smart Definition Search**: Finds Mandarin words (like 很) by searching dictionary definitions
+- 🔊 **Authentic Audio**: Taiwanese pronunciation via Hapsing API with caching
+- 💬 **Common Phrases**: Pre-loaded phrases with instant audio playback
+
+### Learning Tools
+- 🃏 **Flashcard System**: Spaced Repetition System (SRS) for effective learning
+  - Save translations as flashcards
+  - Review with SRS algorithm
+  - Track learning progress (learning → known → mastered)
+  - Audio playback during review
+  - Undo deleted flashcards
+- 📖 **Learning Modules**: Interactive contextual dialogues
+  - Real-world scenarios (At the Bus Stop, At the Doctor, etc.)
+  - Side-by-side Mandarin and Taiwanese
+  - Full romanization with audio
+  - Vocabulary lists with explanations
+  - AI-generated streaming content
+
+### User Experience
+- 🌐 **Clean, Modern UI**: Built with Tailwind CSS
+- ⚡ **Real-time Streaming**: Server-Sent Events for live module generation
+- 📱 **Responsive Design**: Works on desktop and mobile
+- 🐍 **Python Backend**: MOE Dictionary, TauPhahJi-Command, and Claude API
 
 ## Setup
 
@@ -101,6 +124,7 @@ npm run preview
    - **Taiwanese (台語)**: Uses Taiwanese vocabulary (跤踏車, 真好, 的士)
    - **Tâi-lô romanization**: For the Taiwanese translation
    - **Audio pronunciation**: Authentic Taiwanese pronunciation
+5. **Save as flashcard** by clicking the bookmark icon
 
 ### Taiwanese Romanization
 
@@ -112,19 +136,49 @@ npm run preview
 4. View the romanization in Tâi-lô format
 5. Click the audio button to hear authentic Taiwanese pronunciation
 
+### Flashcard System
+
+1. **Save translations** to your flashcard deck using the bookmark icon
+2. **Review flashcards** by clicking "Flashcards" in the navigation
+3. **Study modes**:
+   - Review: Show cards due for review based on SRS algorithm
+   - View All: Browse entire flashcard collection
+4. **Rate your knowledge**: Click "Again", "Hard", "Good", or "Easy"
+5. **Track progress**: See learning status for each card
+6. **Audio support**: Play audio during review
+
+### Learning Modules
+
+1. **Access modules** via "Learning Modules" in the navigation
+2. **Choose a scenario**: At the Bus Stop, At the Doctor, etc.
+3. **Study the dialogue**:
+   - Read side-by-side Mandarin and Taiwanese
+   - See full Tâi-lô romanization
+   - Play audio for each line
+4. **Review vocabulary**: Study key words and phrases
+5. **Save to flashcards**: Add vocabulary directly to your deck
+
 ### Common Phrases
 
 Explore pre-loaded common phrases with audio in the expandable section at the bottom.
 
 ## Important Notes
 
-- **Requires Anthropic API key** for English/Mandarin to Taiwanese translation
+- **Requires Anthropic API key** for English/Mandarin to Taiwanese translation and learning module generation
 - Backend server must be running for all functionality
 - Audio requires internet connection to fetch from Hapsing API
 - **Dual translation system**: Shows BOTH Taiwan Mandarin (國語) AND Taiwanese (台語) with different vocabulary
   - Taiwan Mandarin: 腳踏車, 很好, 吃飯 (Taiwan-specific, not China Mandarin like 自行車, 公共汽車)
   - Taiwanese: 跤踏車, 真好/誠好, 食飯 (authentic Taiwanese vocabulary)
-- **Romanization priority**: MOE Dictionary → character normalization → definition search → TauPhahJi fallback
+- **Advanced romanization**:
+  - MOE Dictionary exact match
+  - AI heteronym disambiguation (看 → khuànn vs khàn based on sentence context)
+  - Automatic number conversion (22 → 二十二 → jī-tsa̍p-jī)
+  - Character normalization (腳 → 跤)
+  - Manual dictionary entries for common words (公車, 看, 最近)
+  - TauPhahJi fallback for comprehensive coverage
+- **Flashcard data**: Stored in browser localStorage (persists across sessions)
+- **Learning modules**: Generated dynamically using Claude API with streaming
 
 ## Technology Stack
 
