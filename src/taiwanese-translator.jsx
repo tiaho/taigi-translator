@@ -2089,8 +2089,7 @@ export default function TaiwaneseTranslator() {
                                   <div className="flex justify-between items-start">
                                     <div className="flex-1">
                                       <p className="text-xs text-gray-600">{word.en}</p>
-                                      <p className="text-sm font-serif text-amber-700">{word.mandarin}</p>
-                                      <p className="text-sm font-serif font-bold text-indigo-900">{word.han}</p>
+                                      <p className="text-base font-serif font-bold text-indigo-900">{word.han}</p>
                                       <p className="text-xs text-gray-500 italic">{word.tailo}</p>
                                     </div>
                                     <button
@@ -2121,8 +2120,7 @@ export default function TaiwaneseTranslator() {
                                     <div className="flex-1">
                                       <p className="text-xs text-gray-500 mb-1">#{idx + 1}</p>
                                       <p className="text-sm text-gray-700 mb-1">{line.en}</p>
-                                      <p className="text-sm font-serif text-amber-700 mb-1">{line.mandarin}</p>
-                                      <p className="text-base font-serif font-bold text-indigo-900 mb-1">{line.taiwanese}</p>
+                                      <p className="text-lg font-serif font-bold text-indigo-900 mb-1">{line.taiwanese}</p>
                                       <p className="text-xs text-gray-500 italic">{line.tailo}</p>
                                     </div>
                                     <button
