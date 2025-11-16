@@ -30,11 +30,24 @@ audio_cache = {}
 CHAR_VARIANTS = {
     '腳': '跤',  # foot/leg
     '脚': '跤',  # simplified variant
+    '嗎': '無',  # question particle (Mandarin ma → Taiwanese bô)
+}
+
+# Phrase variant mapping (Mandarin phrases → Taiwanese phrases)
+# These are common Mandarin words that should be replaced with Taiwanese equivalents
+PHRASE_VARIANTS = {
+    '可以': '會使',  # can/may (Mandarin kěyǐ → Taiwanese ē-sái)
+    '看看': '看覓',  # take a look (Mandarin kàn kàn → Taiwanese khuànn-māi)
+    '如果': '若是',  # if (Mandarin rúguǒ → Taiwanese nā-sī)
 }
 
 def normalize_taiwanese_text(text):
-    """Normalize Mandarin characters to Taiwanese variants for dictionary lookup"""
+    """Normalize Mandarin characters and phrases to Taiwanese variants for dictionary lookup"""
     result = text
+
+    # First, replace multi-character phrases
+    for mandarin_phrase, taiwanese_phrase in PHRASE_VARIANTS.items():
+        result = result.replace(mandarin_phrase, taiwanese_phrase)
     for mandarin_char, taiwanese_char in CHAR_VARIANTS.items():
         result = result.replace(mandarin_char, taiwanese_char)
     return result
@@ -74,6 +87,18 @@ try:
                                     synonym_count += 1
 
         print(f"✅ Loaded MOE Taiwanese Dictionary: {title_count} titles + {synonym_count} synonyms = {len(moe_dict)} total entries")
+
+        # Add manual entries for common words not in dictionary
+        manual_entries = {
+            '最近': 'tsuè-kīn',  # lately, recently (appears in examples but not as title)
+        }
+        for word, romanization in manual_entries.items():
+            if word not in moe_dict:
+                moe_dict[word] = romanization
+
+        if manual_entries:
+            print(f"📝 Added {len(manual_entries)} manual dictionary entries")
+
     else:
         print("⚠️  MOE dictionary file not found, using Tau-Phah-Ji only")
 except Exception as e:
@@ -92,8 +117,11 @@ def search_in_definitions(search_text):
             # Search in definition text
             for defn in definitions:
                 def_text = defn.get('def', '')
-                # Check if search_text appears at the start of definition (common pattern: "很。...")
-                if def_text.startswith(search_text + '。') or def_text.startswith(search_text + ',') or def_text == search_text:
+                # Check if search_text appears at the start of definition (common patterns: "很。...", "生病、得病。")
+                if (def_text.startswith(search_text + '。') or
+                    def_text.startswith(search_text + ',') or
+                    def_text.startswith(search_text + '、') or  # Chinese enumeration comma
+                    def_text == search_text):
                     title = entry.get('title', '')
                     print(f"✅ Found in definitions: {search_text} defined as {title} → {tailo}")
                     return tailo, title
@@ -277,21 +305,25 @@ Provide ONLY the English translation, with no explanations or additional text. J
 def get_taiwanese_romanization(taiwanese_text):
     """
     Get Taiwanese Tâi-lô romanization using MOE dictionary first, then Tau-Phah-Ji as fallback
+    Takes only the first option when multiple romanizations are available (e.g., "guā-tsē/guā-tsuē" → "guā-tsē")
     """
     # Try MOE dictionary first (exact match)
     if taiwanese_text in moe_dict:
-        print(f"✅ Found in MOE dict: {taiwanese_text} → {moe_dict[taiwanese_text]}")
-        return moe_dict[taiwanese_text], taiwanese_text
+        tailo = moe_dict[taiwanese_text].split('/')[0]  # Take first option only
+        print(f"✅ Found in MOE dict: {taiwanese_text} → {tailo}")
+        return tailo, taiwanese_text
 
     # Try with character normalization (e.g., 腳 → 跤)
     normalized_text = normalize_taiwanese_text(taiwanese_text)
     if normalized_text != taiwanese_text and normalized_text in moe_dict:
-        print(f"✅ Found in MOE dict (normalized): {taiwanese_text} → {normalized_text} → {moe_dict[normalized_text]}")
-        return moe_dict[normalized_text], normalized_text
+        tailo = moe_dict[normalized_text].split('/')[0]  # Take first option only
+        print(f"✅ Found in MOE dict (normalized): {taiwanese_text} → {normalized_text} → {tailo}")
+        return tailo, normalized_text
 
     # Search in definitions (e.g., find 很 defined as 真/誠/足)
     tailo, title = search_in_definitions(taiwanese_text)
     if tailo and title:
+        tailo = tailo.split('/')[0]  # Take first option only
         return tailo, title
 
     # Fallback to Tau-Phah-Ji for full phrase (handles word segmentation and tone sandhi)
@@ -299,12 +331,136 @@ def get_taiwanese_romanization(taiwanese_text):
     print(f"ℹ️  Not in MOE dict, using Tau-Phah-Ji: {taiwanese_text} (normalized: {normalized_text})")
     try:
         result = tàuphahjī(normalized_text)
-        kip_romanization = result.get('KIP', '')
+        kip_romanization = result.get('KIP', '').split('/')[0]  # Take first option only
         han_characters = result.get('漢字', normalized_text)
         return kip_romanization, han_characters
     except Exception as e:
         print(f"⚠️  Tau-Phah-Ji failed: {e}")
         return '', normalized_text
+
+def romanize_sentence_with_word_lookup(sentence):
+    """
+    Romanize a sentence by trying to look up individual words in MOE dict first,
+    then falling back to TauPhahJi for the whole sentence.
+    Preserves punctuation from the original sentence.
+
+    Strategy:
+    1. Parse sentence into text segments and punctuation
+    2. Try whole sentence in MOE dict (without punctuation)
+    3. Use greedy longest-match segmentation with MOE dict
+    4. Look up each word in MOE dict (exact → normalized → definition search)
+    5. Fall back to TauPhahJi for words not in MOE dict
+    6. Combine romanizations with original punctuation preserved
+    """
+    import string
+    import re
+
+    chinese_punctuation = '，。！？；：、''""（）【】《》'
+    punctuation_chars = string.punctuation + chinese_punctuation
+
+    # Parse sentence into segments of text and punctuation
+    # Use regex to split while keeping delimiters
+    pattern = f'([{re.escape(punctuation_chars)}]+)'
+    segments = re.split(pattern, sentence)
+
+    # Filter out empty segments
+    segments = [s for s in segments if s]
+
+    if not segments:
+        return ''
+
+    # Extract just the text (no punctuation) for processing
+    text_segments = [s for s in segments if not all(c in punctuation_chars for c in s)]
+    clean_sentence = ''.join(text_segments).strip()
+
+    if not clean_sentence:
+        return ''
+
+    # First try the whole sentence (cleaned)
+    tailo, han = get_taiwanese_romanization(clean_sentence)
+    if tailo and han and han in moe_dict:  # Found exact match in MOE dict
+        # Add back punctuation
+        result_segments = []
+        for seg in segments:
+            if all(c in punctuation_chars for c in seg):
+                result_segments.append(seg)
+            else:
+                result_segments.append(tailo)
+                break
+        return ''.join(result_segments)
+
+    # Romanize each text segment separately and interleave with punctuation
+    print(f"  🔍 Romanizing segments with punctuation preservation")
+    try:
+        result = []
+        for seg in segments:
+            if all(c in punctuation_chars for c in seg):
+                # Punctuation - keep as-is
+                result.append(seg)
+            else:
+                # Text segment - romanize it
+                print(f"  📝 Processing text segment: {seg}")
+
+                # Use greedy longest-match segmentation for this segment
+                words = []
+                i = 0
+                while i < len(seg):
+                    # Try longest match first (up to 5 characters)
+                    found = False
+                    for length in range(min(5, len(seg) - i), 0, -1):
+                        substr = seg[i:i+length]
+                        normalized_substr = normalize_taiwanese_text(substr)
+                        # Check if substring is in MOE dict or can be found via definition search
+                        if substr in moe_dict or normalized_substr in moe_dict:
+                            words.append(substr)
+                            i += length
+                            found = True
+                            break
+                        # Also check definition search
+                        def_tailo, def_title = search_in_definitions(substr)
+                        if def_tailo:
+                            words.append(substr)
+                            i += length
+                            found = True
+                            break
+                    if not found:
+                        # Single character not in dict
+                        words.append(seg[i])
+                        i += 1
+
+                # Romanize each word
+                romanizations = []
+                for word in words:
+                    word_tailo, word_han = get_taiwanese_romanization(word)
+                    if word_tailo and word_han and (word_han in moe_dict or word in moe_dict):
+                        # Found in MOE dict
+                        romanizations.append(word_tailo)
+                        print(f"    ✅ {word} → {word_tailo} (MOE dict)")
+                    else:
+                        # Not in MOE dict, use TauPhahJi for this word
+                        try:
+                            word_result = tàuphahjī(word)
+                            word_kip = word_result.get('KIP', word)
+                            romanizations.append(word_kip)
+                            print(f"    ⚠️  {word} → {word_kip} (TauPhahJi)")
+                        except:
+                            romanizations.append(word)
+                            print(f"    ⚠️  {word} → (fallback)")
+
+                # Join romanizations with spaces
+                segment_tailo = ' '.join(romanizations)
+                result.append(segment_tailo)
+                print(f"  ✅ Segment romanization: {segment_tailo}")
+
+        final_result = ''.join(result)
+        print(f"  ✅ Final with punctuation: {final_result}")
+        return final_result
+
+    except Exception as e:
+        print(f"  ⚠️  Romanization failed: {e}")
+        # Fallback to romanizing the whole sentence without punctuation
+        tailo, _ = get_taiwanese_romanization(clean_sentence)
+        return tailo
 
 def convert_kip_to_tailo(kip_text):
     """
@@ -826,6 +982,15 @@ Create a comprehensive lesson with the following sections:
 4. VOCABULARY: 10-12 essential words for this theme
 5. DIALOGUE: A 10-line natural conversation using this vocabulary
 
+IMPORTANT VOCABULARY GUIDELINES:
+- Use PRECISE, STANDARD vocabulary (not colloquial alternatives)
+- Use Taiwan Mandarin vocabulary (腳踏車 not 自行車, 醫生 not 大夫)
+- Choose the most accurate word for the meaning:
+  * For "sick": use 生病 (not 不舒服 which means "uncomfortable")
+  * For "painful": use 痛 (not 疼)
+  * For medical/formal contexts: use standard medical terms
+- Avoid overly casual or vague alternatives
+
 Format EXACTLY as follows (NOTE: Only generate English and Taiwan Mandarin):
 
 TITLE: [Short title]
@@ -836,14 +1001,14 @@ CULTURAL_NOTE: [2-3 sentences about cultural context]
 
 VOCABULARY:
 WORD:
-EN: [English]
-ZH: [Taiwan Mandarin with traditional characters - use Taiwan vocabulary like 腳踏車, 醫生, not China Mandarin like 自行車, 大夫]
+EN: [English word - be precise]
+ZH: [Precise Taiwan Mandarin translation with traditional characters]
 [Repeat for 10-12 words]
 
 DIALOGUE:
 LINE:
-EN: [English]
-ZH: [Taiwan Mandarin - use Taiwan vocabulary]
+EN: [English sentence]
+ZH: [Taiwan Mandarin translation - use precise vocabulary]
 [Repeat for exactly 10 lines - make it a natural conversation]
 
 Example for "At the Restaurant":
@@ -937,77 +1102,39 @@ Now generate a complete module for "{theme}". Make the dialogue realistic and na
 
         print(f"✅ Generated module: {module['title']} with {len(module['vocabulary'])} words and {len(module['dialogue'])} dialogue lines")
 
-        # Check MOE dict first, only translate with Claude if needed
-        print("📚 Processing vocabulary: checking MOE dict, translating if needed, then romanizing...")
+        # Process vocabulary: use Mandarin characters as Taiwanese, then romanize with word lookup
+        # (Same logic as translate_english_to_taiwanese_with_mandarin line 209)
+        print("📚 Processing vocabulary: using Mandarin characters as Taiwanese, then romanizing with word lookup...")
         for word in module['vocabulary']:
             mandarin_text = word['mandarin']
 
-            # Check if Mandarin text is already in MOE Dictionary
-            if mandarin_text in moe_dict:
-                taiwanese_text = mandarin_text
-                print(f"  {word['en']}: {mandarin_text} ✓ (in MOE dict)")
-            else:
-                # Not in MOE dict, translate Mandarin → Taiwanese using Claude
-                print(f"  {word['en']}: {mandarin_text} ✗ (not in MOE dict, translating...)")
-                try:
-                    message = anthropic_client.messages.create(
-                        model="claude-3-5-haiku-20241022",
-                        max_tokens=20,
-                        messages=[{
-                            "role": "user",
-                            "content": f"""Translate this Taiwan Mandarin to Taiwanese (台語). Output ONLY Taiwanese characters, nothing else.
-
-Taiwan Mandarin: {mandarin_text}
-Taiwanese:"""
-                        }]
-                    )
-                    taiwanese_text = message.content[0].text.strip()
-                    # Remove any parenthetical notes or explanations
-                    if '(' in taiwanese_text or ')' in taiwanese_text or ':' in taiwanese_text:
-                        taiwanese_text = taiwanese_text.split('(')[0].split(':')[0].strip()
-                    print(f"    → {taiwanese_text}")
-                except Exception as e:
-                    print(f"    Error: {e}, fallback to Mandarin")
-                    taiwanese_text = mandarin_text
-
+            # Use same Mandarin characters as "Taiwanese", with normalization (嗎 → 無, 腳 → 跤, etc.)
+            taiwanese_text = normalize_taiwanese_text(mandarin_text)
             word['han'] = taiwanese_text
 
-            # Romanize using MOE Dictionary pipeline
-            tailo, _ = get_taiwanese_romanization(taiwanese_text)
-            word['tailo'] = tailo
+            print(f"  {word['en']}: {mandarin_text} → {taiwanese_text}")
 
-        print("💬 Processing dialogue: translating Mandarin → Taiwanese, then romanizing...")
+            # Romanize using intelligent word lookup (tries whole word, segments if needed, looks up in MOE dict)
+            tailo = romanize_sentence_with_word_lookup(taiwanese_text)
+            word['tailo'] = tailo
+            print(f"    Romanization: {tailo}")
+
+        # Process dialogue: use Mandarin characters as Taiwanese, then romanize with intelligent word lookup
+        # (Same logic as translate_english_to_taiwanese_with_mandarin line 209)
+        print("💬 Processing dialogue: using Mandarin characters as Taiwanese, then romanizing with word lookup...")
         for line in module['dialogue']:
             mandarin_text = line['mandarin']
 
-            # Dialogue lines won't be in MOE dict, so translate directly with Claude
-            print(f"  Translating: {mandarin_text}")
-            try:
-                message = anthropic_client.messages.create(
-                    model="claude-3-5-haiku-20241022",
-                    max_tokens=100,
-                    messages=[{
-                        "role": "user",
-                        "content": f"""Translate this Taiwan Mandarin sentence to Taiwanese (台語). Output ONLY Taiwanese characters, nothing else.
-
-Taiwan Mandarin: {mandarin_text}
-Taiwanese:"""
-                    }]
-                )
-                taiwanese_text = message.content[0].text.strip()
-                # Remove any parenthetical notes or explanations
-                if '(' in taiwanese_text or ')' in taiwanese_text or ':' in taiwanese_text:
-                    taiwanese_text = taiwanese_text.split('(')[0].split(':')[0].strip()
-                print(f"    → {taiwanese_text}")
-            except Exception as e:
-                print(f"    Error: {e}, fallback to Mandarin")
-                taiwanese_text = mandarin_text
-
+            # Use same Mandarin characters as "Taiwanese", with normalization (嗎 → 無, 腳 → 跤, etc.)
+            taiwanese_text = normalize_taiwanese_text(mandarin_text)
             line['taiwanese'] = taiwanese_text
 
-            # Romanize using MOE Dictionary pipeline
-            tailo, _ = get_taiwanese_romanization(taiwanese_text)
+            print(f"  {mandarin_text} → {taiwanese_text}")
+
+            # Romanize using intelligent word lookup (tries whole sentence, then common splits, then TauPhahJi)
+            tailo = romanize_sentence_with_word_lookup(taiwanese_text)
             line['tailo'] = tailo
+            print(f"    Romanization: {tailo}")
 
         return jsonify({
             'success': True,
