@@ -937,28 +937,78 @@ Now generate a complete module for "{theme}". Make the dialogue realistic and na
 
         print(f"✅ Generated module: {module['title']} with {len(module['vocabulary'])} words and {len(module['dialogue'])} dialogue lines")
 
-        # Use Mandarin as Taiwanese (existing pipeline behavior) and romanize using MOE Dictionary
-        print("📚 Processing vocabulary: using Mandarin as Taiwanese, then romanizing via MOE Dictionary...")
+        # Check MOE dict first, only translate with Claude if needed
+        print("📚 Processing vocabulary: checking MOE dict, translating if needed, then romanizing...")
         for word in module['vocabulary']:
-            # Use Mandarin text as Taiwanese (same as existing pipeline)
-            taiwanese_text = word['mandarin']
+            mandarin_text = word['mandarin']
+
+            # Check if Mandarin text is already in MOE Dictionary
+            if mandarin_text in moe_dict:
+                taiwanese_text = mandarin_text
+                print(f"  {word['en']}: {mandarin_text} ✓ (in MOE dict)")
+            else:
+                # Not in MOE dict, translate Mandarin → Taiwanese using Claude
+                print(f"  {word['en']}: {mandarin_text} ✗ (not in MOE dict, translating...)")
+                try:
+                    message = anthropic_client.messages.create(
+                        model="claude-3-5-haiku-20241022",
+                        max_tokens=50,
+                        messages=[{
+                            "role": "user",
+                            "content": f"""Translate to Taiwanese (台語):
+
+{mandarin_text}
+
+Output ONLY the Taiwanese text. No explanations, no notes, no translations - just the Taiwanese characters:"""
+                        }]
+                    )
+                    taiwanese_text = message.content[0].text.strip()
+                    print(f"    → {taiwanese_text}")
+                except Exception as e:
+                    print(f"    Error: {e}, fallback to Mandarin")
+                    taiwanese_text = mandarin_text
+
             word['han'] = taiwanese_text
 
             # Romanize using MOE Dictionary pipeline
             tailo, _ = get_taiwanese_romanization(taiwanese_text)
             word['tailo'] = tailo
-            print(f"  {word['en']}: {taiwanese_text} → {tailo}")
 
-        print("💬 Processing dialogue: using Mandarin as Taiwanese, then romanizing via MOE Dictionary...")
+        print("💬 Processing dialogue: checking MOE dict, translating if needed, then romanizing...")
         for line in module['dialogue']:
-            # Use Mandarin text as Taiwanese (same as existing pipeline)
-            taiwanese_text = line['mandarin']
+            mandarin_text = line['mandarin']
+
+            # Check if Mandarin text is already in MOE Dictionary
+            if mandarin_text in moe_dict:
+                taiwanese_text = mandarin_text
+                print(f"  {mandarin_text} ✓ (in MOE dict)")
+            else:
+                # Not in MOE dict, translate Mandarin → Taiwanese using Claude
+                print(f"  {mandarin_text} ✗ (not in MOE dict, translating...)")
+                try:
+                    message = anthropic_client.messages.create(
+                        model="claude-3-5-haiku-20241022",
+                        max_tokens=100,
+                        messages=[{
+                            "role": "user",
+                            "content": f"""Translate to Taiwanese (台語):
+
+{mandarin_text}
+
+Output ONLY the Taiwanese text. No explanations, no notes, no translations - just the Taiwanese characters:"""
+                        }]
+                    )
+                    taiwanese_text = message.content[0].text.strip()
+                    print(f"    → {taiwanese_text}")
+                except Exception as e:
+                    print(f"    Error: {e}, fallback to Mandarin")
+                    taiwanese_text = mandarin_text
+
             line['taiwanese'] = taiwanese_text
 
             # Romanize using MOE Dictionary pipeline
             tailo, _ = get_taiwanese_romanization(taiwanese_text)
             line['tailo'] = tailo
-            print(f"  {taiwanese_text} → {tailo}")
 
         return jsonify({
             'success': True,
