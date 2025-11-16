@@ -42,6 +42,20 @@ export default function TaiwaneseTranslator() {
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
   const [confirmDeleteCard, setConfirmDeleteCard] = useState(null); // stores card ID to delete
   const [undoAction, setUndoAction] = useState(null); // stores last action for undo: {type, data}
+  const [showLearningModules, setShowLearningModules] = useState(false);
+  const [learningModules, setLearningModules] = useState(() => {
+    // Load learning modules from localStorage on mount
+    try {
+      const saved = localStorage.getItem('learningModules');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error('Error loading learning modules:', e);
+      return [];
+    }
+  });
+  const [customTheme, setCustomTheme] = useState('');
+  const [isGeneratingModule, setIsGeneratingModule] = useState(false);
+  const [selectedModule, setSelectedModule] = useState(null);
   const [pronunciationGuide, setPronunciationGuide] = useState('');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [audioError, setAudioError] = useState('');
@@ -1016,6 +1030,82 @@ export default function TaiwaneseTranslator() {
     }
   };
 
+  const generateModule = async (theme) => {
+    if (!theme.trim()) return;
+
+    setIsGeneratingModule(true);
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${apiUrl}/api/generate-module`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          theme: theme.trim()
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to generate module: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('Generated module:', result);
+
+      if (result.success && result.module) {
+        // Add to learning modules list
+        const newModule = {
+          ...result.module,
+          id: Date.now(),
+          createdAt: new Date().toISOString()
+        };
+
+        const updatedModules = [...learningModules, newModule];
+        setLearningModules(updatedModules);
+
+        // Save to localStorage
+        try {
+          localStorage.setItem('learningModules', JSON.stringify(updatedModules));
+          console.log('✅ Saved learning module to localStorage');
+        } catch (e) {
+          console.error('Error saving to localStorage:', e);
+        }
+
+        // Select the new module
+        setSelectedModule(newModule);
+
+        // Clear input
+        setCustomTheme('');
+      } else {
+        alert('Failed to generate learning module. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error generating module:', error);
+      alert(`Error: ${error.message}`);
+    } finally {
+      setIsGeneratingModule(false);
+    }
+  };
+
+  const deleteModule = (moduleId) => {
+    const updatedModules = learningModules.filter(m => m.id !== moduleId);
+    setLearningModules(updatedModules);
+
+    try {
+      localStorage.setItem('learningModules', JSON.stringify(updatedModules));
+      console.log('✅ Deleted module from localStorage');
+    } catch (e) {
+      console.error('Error saving to localStorage:', e);
+    }
+
+    // Deselect if this was the selected module
+    if (selectedModule && selectedModule.id === moduleId) {
+      setSelectedModule(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       {/* Shared audio element for all audio playback */}
@@ -1878,6 +1968,182 @@ export default function TaiwaneseTranslator() {
                       ))}
                     </div>
                   )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Learning Modules Section */}
+        <div className="mt-6 bg-white rounded-lg shadow-md overflow-hidden">
+          <button
+            onClick={() => setShowLearningModules(!showLearningModules)}
+            className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-indigo-600" />
+              <span className="font-medium text-gray-800">Contextual Learning Modules</span>
+              <span className="text-xs text-gray-500">({learningModules.length} modules)</span>
+            </div>
+            <span className="text-gray-400">{showLearningModules ? '−' : '+'}</span>
+          </button>
+
+          {showLearningModules && (
+            <div className="p-4 border-t">
+              {/* Theme Generator */}
+              <div className="mb-6 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-200">
+                <h3 className="text-sm font-semibold text-indigo-800 mb-2">✨ Generate Learning Module</h3>
+                <p className="text-xs text-indigo-600 mb-3">Choose a theme or create your own custom module</p>
+
+                {/* Suggested Themes */}
+                <div className="mb-3">
+                  <p className="text-xs text-indigo-700 font-medium mb-2">Quick themes:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {['Restaurant', 'Market', 'Family Gathering', 'Greetings', 'Transportation', 'Weather', 'Shopping', 'Health'].map((theme) => (
+                      <button
+                        key={theme}
+                        onClick={() => generateModule(theme)}
+                        disabled={isGeneratingModule}
+                        className="px-3 py-1 text-xs rounded-full bg-white border border-indigo-300 text-indigo-700 hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {theme}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Custom Theme Input */}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={customTheme}
+                    onChange={(e) => setCustomTheme(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        generateModule(customTheme);
+                      }
+                    }}
+                    placeholder="Or enter custom theme..."
+                    disabled={isGeneratingModule}
+                    className="flex-1 px-3 py-2 text-sm border border-indigo-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-gray-100"
+                  />
+                  <button
+                    onClick={() => generateModule(customTheme)}
+                    disabled={isGeneratingModule || !customTheme.trim()}
+                    className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                  >
+                    {isGeneratingModule ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      'Generate'
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Display Learning Modules */}
+              {learningModules.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p className="text-sm">No modules yet. Generate one above to get started!</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {learningModules.map((module) => (
+                    <div key={module.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                      {/* Module Header */}
+                      <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 border-b">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <h3 className="text-lg font-bold text-indigo-900 mb-1">{module.title}</h3>
+                            <p className="text-sm text-indigo-700 mb-2">{module.description}</p>
+                            {module.culturalNote && (
+                              <div className="bg-amber-50 border-l-4 border-amber-400 p-2 rounded">
+                                <p className="text-xs text-amber-800">
+                                  <span className="font-semibold">Cultural Note:</span> {module.culturalNote}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => deleteModule(module.id)}
+                            className="ml-2 text-red-500 hover:text-red-700 transition-colors"
+                            title="Delete module"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Module Content */}
+                      <div className="p-4">
+                        {/* Vocabulary Section */}
+                        {module.vocabulary && module.vocabulary.length > 0 && (
+                          <div className="mb-4">
+                            <h4 className="text-sm font-semibold text-gray-800 mb-2">📚 Vocabulary ({module.vocabulary.length} words)</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                              {module.vocabulary.map((word, idx) => (
+                                <div key={idx} className="p-2 bg-gray-50 rounded border border-gray-200">
+                                  <div className="flex justify-between items-start">
+                                    <div className="flex-1">
+                                      <p className="text-xs text-gray-600">{word.en}</p>
+                                      <p className="text-sm font-serif text-amber-700">{word.mandarin}</p>
+                                      <p className="text-sm font-serif font-bold text-indigo-900">{word.han}</p>
+                                      <p className="text-xs text-gray-500 italic">{word.tailo}</p>
+                                    </div>
+                                    <button
+                                      onClick={() => playPhraseAudio({ tailo: word.tailo })}
+                                      disabled={isSpeaking}
+                                      className={`p-1 rounded transition-colors ${
+                                        isSpeaking ? 'bg-green-300' : 'bg-green-500 hover:bg-green-600'
+                                      } text-white`}
+                                      title="Play audio"
+                                    >
+                                      <Volume2 className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Dialogue Section */}
+                        {module.dialogue && module.dialogue.length > 0 && (
+                          <div>
+                            <h4 className="text-sm font-semibold text-gray-800 mb-2">💬 Dialogue ({module.dialogue.length} lines)</h4>
+                            <div className="space-y-2">
+                              {module.dialogue.map((line, idx) => (
+                                <div key={idx} className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                  <div className="flex justify-between items-start gap-3">
+                                    <div className="flex-1">
+                                      <p className="text-xs text-gray-500 mb-1">#{idx + 1}</p>
+                                      <p className="text-sm text-gray-700 mb-1">{line.en}</p>
+                                      <p className="text-sm font-serif text-amber-700 mb-1">{line.mandarin}</p>
+                                      <p className="text-base font-serif font-bold text-indigo-900 mb-1">{line.taiwanese}</p>
+                                      <p className="text-xs text-gray-500 italic">{line.tailo}</p>
+                                    </div>
+                                    <button
+                                      onClick={() => playPhraseAudio({ tailo: line.tailo })}
+                                      disabled={isSpeaking}
+                                      className={`p-2 rounded-lg transition-colors ${
+                                        isSpeaking ? 'bg-green-400' : 'bg-green-600 hover:bg-green-700'
+                                      } text-white flex-shrink-0`}
+                                      title="Play audio"
+                                    >
+                                      <Volume2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

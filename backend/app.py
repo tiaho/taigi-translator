@@ -793,6 +793,184 @@ Generate 8-12 words related to "{topic}". Start now:"""
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/generate-module', methods=['POST'])
+def generate_module():
+    """
+    Generate a complete learning module for a given theme using Claude API
+    """
+    try:
+        data = request.json
+        theme = data.get('theme', '')
+
+        if not theme:
+            return jsonify({'error': 'No theme provided'}), 400
+
+        if not anthropic_client:
+            return jsonify({'error': 'Claude API not configured'}), 500
+
+        print(f"Generating learning module for theme: {theme}")
+
+        message = anthropic_client.messages.create(
+            model="claude-3-5-haiku-20241022",
+            max_tokens=4000,
+            messages=[{
+                "role": "user",
+                "content": f"""Generate a Taiwanese language learning module for the theme "{theme}".
+
+Create a comprehensive lesson with the following sections:
+
+1. TITLE: A short descriptive title (in English)
+2. DESCRIPTION: One sentence describing what learners will practice
+3. CULTURAL_NOTE: 2-3 sentences about cultural context (why this is important in Taiwanese culture)
+4. VOCABULARY: 10-12 essential words for this theme
+5. DIALOGUE: A 10-line natural conversation using this vocabulary
+
+Format EXACTLY as follows:
+
+TITLE: [Short title]
+
+DESCRIPTION: [One sentence]
+
+CULTURAL_NOTE: [2-3 sentences about cultural context]
+
+VOCABULARY:
+WORD:
+EN: [English]
+ZH: [Taiwan Mandarin with traditional characters - use Taiwan vocabulary like 腳踏車, not China Mandarin]
+TW: [Taiwanese with traditional characters]
+TAILO: [Tâi-lô romanization]
+[Repeat for 10-12 words]
+
+DIALOGUE:
+LINE:
+EN: [English]
+ZH: [Taiwan Mandarin - use Taiwan vocabulary]
+TW: [Taiwanese]
+TAILO: [Tâi-lô romanization]
+[Repeat for exactly 10 lines - make it a natural conversation]
+
+Example for "At the Restaurant":
+TITLE: At the Restaurant
+
+DESCRIPTION: Learn how to order food and interact at restaurants
+
+CULTURAL_NOTE: In Taiwan, it's common to share dishes family-style rather than ordering individual meals. Tea is usually free and constantly refilled. Saying "食飽未?" (Have you eaten?) is a common greeting showing care.
+
+VOCABULARY:
+WORD:
+EN: Menu
+ZH: 菜單
+TW: 菜單
+TAILO: Tshài-tuann
+
+WORD:
+EN: Delicious
+ZH: 好吃
+TW: 好食
+TAILO: Hó-tsia̍h
+
+DIALOGUE:
+LINE:
+EN: Excuse me, can I see the menu?
+ZH: 不好意思，可以看菜單嗎？
+TW: 歹勢，會使看菜單無？
+TAILO: Pháinn-sè, ē-sái khuànn tshài-tuann bô?
+
+LINE:
+EN: I want beef noodles.
+ZH: 我要牛肉麵。
+TW: 我欲牛肉麵。
+TAILO: Guá beh gû-bah-mī.
+
+Now generate a complete module for "{theme}". Make the dialogue realistic and natural:"""
+            }]
+        )
+
+        response_text = message.content[0].text.strip()
+        print(f"Claude module response received, parsing...")
+
+        # Parse the response
+        module = {
+            'theme': theme,
+            'title': '',
+            'description': '',
+            'culturalNote': '',
+            'vocabulary': [],
+            'dialogue': []
+        }
+
+        lines = response_text.split('\n')
+        current_section = None
+        current_word = {}
+        current_line = {}
+
+        for line in lines:
+            line_stripped = line.strip()
+
+            if line_stripped.startswith('TITLE:'):
+                module['title'] = line_stripped.replace('TITLE:', '').strip()
+            elif line_stripped.startswith('DESCRIPTION:'):
+                module['description'] = line_stripped.replace('DESCRIPTION:', '').strip()
+            elif line_stripped.startswith('CULTURAL_NOTE:'):
+                module['culturalNote'] = line_stripped.replace('CULTURAL_NOTE:', '').strip()
+            elif line_stripped == 'VOCABULARY:':
+                current_section = 'vocabulary'
+            elif line_stripped == 'DIALOGUE:':
+                current_section = 'dialogue'
+            elif line_stripped == 'WORD:':
+                current_word = {}
+            elif line_stripped == 'LINE:':
+                current_line = {}
+            elif line_stripped.startswith('EN:'):
+                value = line_stripped.replace('EN:', '').strip()
+                if current_section == 'vocabulary':
+                    current_word['en'] = value
+                elif current_section == 'dialogue':
+                    current_line['en'] = value
+            elif line_stripped.startswith('ZH:'):
+                value = line_stripped.replace('ZH:', '').strip()
+                if current_section == 'vocabulary':
+                    current_word['mandarin'] = value
+                elif current_section == 'dialogue':
+                    current_line['mandarin'] = value
+            elif line_stripped.startswith('TW:'):
+                value = line_stripped.replace('TW:', '').strip()
+                if current_section == 'vocabulary':
+                    current_word['han'] = value
+                elif current_section == 'dialogue':
+                    current_line['taiwanese'] = value
+            elif line_stripped.startswith('TAILO:'):
+                value = line_stripped.replace('TAILO:', '').strip()
+                if current_section == 'vocabulary':
+                    current_word['tailo'] = value
+                    # Word is complete
+                    if all(key in current_word for key in ['en', 'mandarin', 'han', 'tailo']):
+                        module['vocabulary'].append(current_word.copy())
+                        current_word = {}
+                elif current_section == 'dialogue':
+                    current_line['tailo'] = value
+                    # Line is complete
+                    if all(key in current_line for key in ['en', 'mandarin', 'taiwanese', 'tailo']):
+                        module['dialogue'].append(current_line.copy())
+                        current_line = {}
+
+        # Ensure we have the minimum content
+        if not module['title'] or len(module['dialogue']) < 5:
+            return jsonify({'error': 'Failed to generate complete module'}), 500
+
+        print(f"✅ Generated module: {module['title']} with {len(module['vocabulary'])} words and {len(module['dialogue'])} dialogue lines")
+
+        return jsonify({
+            'success': True,
+            'module': module
+        })
+
+    except Exception as e:
+        print(f"Error generating module: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/health', methods=['GET'])
 def health():
     return jsonify({'status': 'ok', 'message': 'Flask backend is running'})
