@@ -259,12 +259,17 @@ This document contains ideas for educational features to add to the Taiwanese tr
 - ✅ Save translation results as flashcards (DONE)
 
 ### Phase 2: Core Learning Features (Week 3-4)
-- ✅ Flashcard review with basic SRS (DONE)
+- ✅ Flashcard review with SRS (DONE)
+  - SRS algorithm with 4 difficulty levels (Again: 1 day, Hard: 3 days, Good: 7 days, Easy: 14 days)
+  - Status tracking: learning → known → mastered
+  - localStorage persistence
 - ✅ Flashcard view all mode (DONE)
 - ✅ Flashcard delete with confirmation (DONE)
-- ✅ Flashcard undo functionality (DONE)
+- ✅ Flashcard undo functionality (DONE) - Last 10 deletions can be restored
+- ✅ Flashcard audio playback during review (DONE)
+- ✅ Batch add flashcards from learning modules (DONE)
 - [ ] Quiz modes (translation, listening)
-- [ ] Progress tracking and statistics
+- [ ] Progress tracking and statistics dashboard
 - [ ] Daily challenge system
 
 ### Phase 3: Advanced Features (Week 5-6)
@@ -274,9 +279,28 @@ This document contains ideas for educational features to add to the Taiwanese tr
 - [ ] Export/import flashcards
 
 ### Phase 4: Unique Taiwanese Features (Week 7-8)
+- ✅ Contextual learning modules (DONE)
+  - Real-world scenarios (At the Bus Stop, At the Doctor, At the Restaurant, etc.)
+  - Side-by-side Mandarin and Taiwanese dialogue
+  - Full Tâi-lô romanization for all Taiwanese content
+  - Vocabulary lists with definitions and examples
+  - AI-generated streaming content using Claude API
+  - Server-Sent Events (SSE) for real-time generation
+  - Audio playback for each dialogue line
+  - Batch add all vocabulary to flashcards
+- ✅ AI-powered heteronym disambiguation (DONE)
+  - Context-based pronunciation selection (e.g., 看 → khuànn vs khàn)
+  - Uses Claude API with minimal token cost (10 tokens max per word)
+  - Graceful fallback to first option if API unavailable
+- ✅ Automatic number conversion (DONE)
+  - Arabic numerals → Traditional Chinese → Tâi-lô romanization
+  - Example: 22 → 二十二 → jī-tsa̍p-jī
+  - Handles 0-999 with proper Chinese formatting
+- ✅ Manual dictionary override system (DONE)
+  - Common words: 最近 (tsuè-kīn), 公車 (kong-tshia), 看 (khuànn)
+  - Always overrides MOE dictionary for consistent pronunciation
 - [ ] Tone Sandhi Trainer
-- [ ] Pronunciation practice
-- 🔄 Contextual learning modules (IN PROGRESS)
+- [ ] Pronunciation practice with recording
 - [ ] Word association game
 
 ### Phase 5: Polish & Scale (Week 9+)
@@ -326,5 +350,23 @@ Before implementing, consider asking potential users:
 
 ---
 
-**Last Updated:** 2025-11-15
-**Status:** Phase 1 & 2 complete. Flashcard system with SRS implemented. Working on contextual learning modules.
+**Last Updated:** 2025-11-16
+**Status:** Phase 1, 2, and 4 complete.
+
+**Completed Features:**
+- ✅ Dual translation system (Taiwan Mandarin + Taiwanese)
+- ✅ MOE Dictionary integration with 16,579 entries
+- ✅ Advanced romanization with AI heteronym disambiguation
+- ✅ Automatic number conversion (Arabic → Chinese → Tâi-lô)
+- ✅ Manual dictionary override system
+- ✅ Flashcard system with SRS algorithm
+- ✅ Learning modules with real-time streaming generation
+- ✅ Batch flashcard creation from vocabulary lists
+- ✅ Audio playback for all Taiwanese content
+- ✅ localStorage persistence for flashcards
+
+**Next Priorities:**
+- [ ] Progress tracking and statistics dashboard
+- [ ] Quiz modes (translation, listening comprehension)
+- [ ] Tone Sandhi Trainer
+- [ ] Daily challenge system
