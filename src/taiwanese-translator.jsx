@@ -55,6 +55,7 @@ export default function TaiwaneseTranslator() {
   });
   const [customTheme, setCustomTheme] = useState('');
   const [isGeneratingModule, setIsGeneratingModule] = useState(false);
+  const [generationStatus, setGenerationStatus] = useState('');
   const [selectedModule, setSelectedModule] = useState(null);
   const [pronunciationGuide, setPronunciationGuide] = useState('');
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -1034,9 +1035,13 @@ export default function TaiwaneseTranslator() {
     if (!theme.trim()) return;
 
     setIsGeneratingModule(true);
+    setGenerationStatus('🎨 Generating module content...');
 
     try {
       const apiUrl = import.meta.env.VITE_API_URL || '';
+
+      // Start generating
+      setGenerationStatus('🤖 Generating vocabulary and dialogue...');
       const response = await fetch(`${apiUrl}/api/generate-module`, {
         method: 'POST',
         headers: {
@@ -1051,10 +1056,13 @@ export default function TaiwaneseTranslator() {
         throw new Error(`Failed to generate module: ${response.status}`);
       }
 
+      setGenerationStatus('📚 Processing translations...');
       const result = await response.json();
       console.log('Generated module:', result);
 
       if (result.success && result.module) {
+        setGenerationStatus('✅ Module ready!');
+
         // Add to learning modules list
         const newModule = {
           ...result.module,
@@ -1078,11 +1086,15 @@ export default function TaiwaneseTranslator() {
 
         // Clear input
         setCustomTheme('');
+
+        // Clear status after a moment
+        setTimeout(() => setGenerationStatus(''), 2000);
       } else {
         alert('Failed to generate learning module. Please try again.');
       }
     } catch (error) {
       console.error('Error generating module:', error);
+      setGenerationStatus('');
       alert(`Error: ${error.message}`);
     } finally {
       setIsGeneratingModule(false);
@@ -2042,6 +2054,18 @@ export default function TaiwaneseTranslator() {
                     )}
                   </button>
                 </div>
+
+                {/* Status Bar */}
+                {generationStatus && (
+                  <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-800 font-medium flex items-center gap-2">
+                      {generationStatus.includes('...') && (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      )}
+                      {generationStatus}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Display Learning Modules */}

@@ -952,17 +952,19 @@ Now generate a complete module for "{theme}". Make the dialogue realistic and na
                 try:
                     message = anthropic_client.messages.create(
                         model="claude-3-5-haiku-20241022",
-                        max_tokens=50,
+                        max_tokens=20,
                         messages=[{
                             "role": "user",
-                            "content": f"""Translate to Taiwanese (台語):
+                            "content": f"""Translate this Taiwan Mandarin to Taiwanese (台語). Output ONLY Taiwanese characters, nothing else.
 
-{mandarin_text}
-
-Output ONLY the Taiwanese text. No explanations, no notes, no translations - just the Taiwanese characters:"""
+Taiwan Mandarin: {mandarin_text}
+Taiwanese:"""
                         }]
                     )
                     taiwanese_text = message.content[0].text.strip()
+                    # Remove any parenthetical notes or explanations
+                    if '(' in taiwanese_text or ')' in taiwanese_text or ':' in taiwanese_text:
+                        taiwanese_text = taiwanese_text.split('(')[0].split(':')[0].strip()
                     print(f"    → {taiwanese_text}")
                 except Exception as e:
                     print(f"    Error: {e}, fallback to Mandarin")
@@ -974,35 +976,32 @@ Output ONLY the Taiwanese text. No explanations, no notes, no translations - jus
             tailo, _ = get_taiwanese_romanization(taiwanese_text)
             word['tailo'] = tailo
 
-        print("💬 Processing dialogue: checking MOE dict, translating if needed, then romanizing...")
+        print("💬 Processing dialogue: translating Mandarin → Taiwanese, then romanizing...")
         for line in module['dialogue']:
             mandarin_text = line['mandarin']
 
-            # Check if Mandarin text is already in MOE Dictionary
-            if mandarin_text in moe_dict:
+            # Dialogue lines won't be in MOE dict, so translate directly with Claude
+            print(f"  Translating: {mandarin_text}")
+            try:
+                message = anthropic_client.messages.create(
+                    model="claude-3-5-haiku-20241022",
+                    max_tokens=100,
+                    messages=[{
+                        "role": "user",
+                        "content": f"""Translate this Taiwan Mandarin sentence to Taiwanese (台語). Output ONLY Taiwanese characters, nothing else.
+
+Taiwan Mandarin: {mandarin_text}
+Taiwanese:"""
+                    }]
+                )
+                taiwanese_text = message.content[0].text.strip()
+                # Remove any parenthetical notes or explanations
+                if '(' in taiwanese_text or ')' in taiwanese_text or ':' in taiwanese_text:
+                    taiwanese_text = taiwanese_text.split('(')[0].split(':')[0].strip()
+                print(f"    → {taiwanese_text}")
+            except Exception as e:
+                print(f"    Error: {e}, fallback to Mandarin")
                 taiwanese_text = mandarin_text
-                print(f"  {mandarin_text} ✓ (in MOE dict)")
-            else:
-                # Not in MOE dict, translate Mandarin → Taiwanese using Claude
-                print(f"  {mandarin_text} ✗ (not in MOE dict, translating...)")
-                try:
-                    message = anthropic_client.messages.create(
-                        model="claude-3-5-haiku-20241022",
-                        max_tokens=100,
-                        messages=[{
-                            "role": "user",
-                            "content": f"""Translate to Taiwanese (台語):
-
-{mandarin_text}
-
-Output ONLY the Taiwanese text. No explanations, no notes, no translations - just the Taiwanese characters:"""
-                        }]
-                    )
-                    taiwanese_text = message.content[0].text.strip()
-                    print(f"    → {taiwanese_text}")
-                except Exception as e:
-                    print(f"    Error: {e}, fallback to Mandarin")
-                    taiwanese_text = mandarin_text
 
             line['taiwanese'] = taiwanese_text
 
