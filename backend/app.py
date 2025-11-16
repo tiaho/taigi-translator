@@ -41,11 +41,60 @@ PHRASE_VARIANTS = {
     '如果': '若是',  # if (Mandarin rúguǒ → Taiwanese nā-sī)
 }
 
+def convert_numbers_to_chinese(text):
+    """Convert Arabic numerals to Traditional Chinese characters"""
+    import re
+
+    # Mapping for digits
+    digit_map = {
+        '0': '零', '1': '一', '2': '二', '3': '三', '4': '四',
+        '5': '五', '6': '六', '7': '七', '8': '八', '9': '九'
+    }
+
+    def num_to_chinese(num_str):
+        """Convert a number string to Traditional Chinese"""
+        num = int(num_str)
+
+        if num == 0:
+            return '零'
+
+        # Handle numbers 1-99
+        if num < 10:
+            return digit_map[str(num)]
+        elif num < 20:
+            return '十' + (digit_map[str(num % 10)] if num % 10 != 0 else '')
+        elif num < 100:
+            tens = num // 10
+            ones = num % 10
+            return digit_map[str(tens)] + '十' + (digit_map[str(ones)] if ones != 0 else '')
+        elif num < 1000:
+            hundreds = num // 100
+            remainder = num % 100
+            result = digit_map[str(hundreds)] + '百'
+            if remainder > 0:
+                if remainder < 10:
+                    result += '零' + digit_map[str(remainder)]
+                else:
+                    result += num_to_chinese(str(remainder))
+            return result
+        else:
+            # For larger numbers, just convert digit by digit
+            return ''.join(digit_map.get(d, d) for d in num_str)
+
+    # Find all numbers in the text and replace them
+    def replace_num(match):
+        return num_to_chinese(match.group(0))
+
+    return re.sub(r'\d+', replace_num, text)
+
 def normalize_taiwanese_text(text):
     """Normalize Mandarin characters and phrases to Taiwanese variants for dictionary lookup"""
     result = text
 
-    # First, replace multi-character phrases
+    # Convert Arabic numerals to Chinese characters first
+    result = convert_numbers_to_chinese(result)
+
+    # Then replace multi-character phrases
     for mandarin_phrase, taiwanese_phrase in PHRASE_VARIANTS.items():
         result = result.replace(mandarin_phrase, taiwanese_phrase)
     for mandarin_char, taiwanese_char in CHAR_VARIANTS.items():
@@ -91,10 +140,11 @@ try:
         # Add manual entries for common words not in dictionary
         manual_entries = {
             '最近': 'tsuè-kīn',  # lately, recently (appears in examples but not as title)
+            '公車': 'kong-tshia',  # bus (appears in examples but not as title)
+            '看': 'khuànn',  # to see/look (override first heteronym which is khàn = supervise)
         }
         for word, romanization in manual_entries.items():
-            if word not in moe_dict:
-                moe_dict[word] = romanization
+            moe_dict[word] = romanization  # Always override with manual entry
 
         if manual_entries:
             print(f"📝 Added {len(manual_entries)} manual dictionary entries")
@@ -302,13 +352,81 @@ Provide ONLY the English translation, with no explanations or additional text. J
         print(f"Translation error: {e}")
         raise
 
-def get_taiwanese_romanization(taiwanese_text):
+def disambiguate_heteronyms_with_context(sentence, word, heteronyms):
+    """
+    Use Claude API to choose the correct heteronym pronunciation based on sentence context
+
+    Args:
+        sentence: The full Taiwanese sentence
+        word: The ambiguous word
+        heteronyms: List of heteronym objects with 'trs' and 'definitions' fields
+
+    Returns:
+        Chosen romanization string, or None if disambiguation fails
+    """
+    if not anthropic_client or len(heteronyms) <= 1:
+        return None
+
+    try:
+        # Build prompt with all heteronym options
+        prompt = f"""Given the Taiwanese sentence: "{sentence}"
+
+The word "{word}" has multiple possible pronunciations. Choose the correct one based on context.
+
+Options:
+"""
+        for i, het in enumerate(heteronyms, 1):
+            trs = het.get('trs', '')
+            definitions = het.get('definitions', [])
+            def_text = definitions[0].get('def', '') if definitions else ''
+            prompt += f"{i}. {trs} - {def_text}\n"
+
+        prompt += "\nRespond with ONLY the number (1, 2, etc.) of the correct pronunciation:"
+
+        # Call Claude with minimal tokens
+        response = anthropic_client.messages.create(
+            model="claude-3-5-haiku-20241022",
+            max_tokens=10,
+            messages=[{"role": "user", "content": prompt}]
+        )
+
+        # Parse response - should be just a number
+        choice_text = response.content[0].text.strip()
+        choice_num = int(choice_text) - 1
+
+        if 0 <= choice_num < len(heteronyms):
+            chosen_trs = heteronyms[choice_num].get('trs', '')
+            print(f"  🤖 Claude disambiguated '{word}': chose option {choice_num + 1} → {chosen_trs}")
+            return chosen_trs.split('/')[0]  # Take first option
+
+    except Exception as e:
+        print(f"  ⚠️  Heteronym disambiguation failed for '{word}': {e}")
+
+    return None
+
+def get_taiwanese_romanization(taiwanese_text, sentence_context=None):
     """
     Get Taiwanese Tâi-lô romanization using MOE dictionary first, then Tau-Phah-Ji as fallback
     Takes only the first option when multiple romanizations are available (e.g., "guā-tsē/guā-tsuē" → "guā-tsē")
     """
     # Try MOE dictionary first (exact match)
     if taiwanese_text in moe_dict:
+        # Check if word has multiple heteronyms in full MOE data
+        heteronyms = None
+        for entry in moe_data:
+            if entry.get('title') == taiwanese_text:
+                heteronyms = entry.get('heteronyms', [])
+                break
+
+        # If multiple heteronyms and we have sentence context, disambiguate with Claude
+        if heteronyms and len(heteronyms) > 1 and sentence_context:
+            disambiguated_tailo = disambiguate_heteronyms_with_context(
+                sentence_context, taiwanese_text, heteronyms
+            )
+            if disambiguated_tailo:
+                return disambiguated_tailo, taiwanese_text
+
+        # Default: use first option from moe_dict
         tailo = moe_dict[taiwanese_text].split('/')[0]  # Take first option only
         print(f"✅ Found in MOE dict: {taiwanese_text} → {tailo}")
         return tailo, taiwanese_text
@@ -377,7 +495,7 @@ def romanize_sentence_with_word_lookup(sentence):
         return ''
 
     # First try the whole sentence (cleaned)
-    tailo, han = get_taiwanese_romanization(clean_sentence)
+    tailo, han = get_taiwanese_romanization(clean_sentence, sentence_context=clean_sentence)
     if tailo and han and han in moe_dict:  # Found exact match in MOE dict
         # Add back punctuation
         result_segments = []
@@ -431,7 +549,7 @@ def romanize_sentence_with_word_lookup(sentence):
                 # Romanize each word
                 romanizations = []
                 for word in words:
-                    word_tailo, word_han = get_taiwanese_romanization(word)
+                    word_tailo, word_han = get_taiwanese_romanization(word, sentence_context=seg)
                     if word_tailo and word_han and (word_han in moe_dict or word in moe_dict):
                         # Found in MOE dict
                         romanizations.append(word_tailo)
@@ -985,9 +1103,11 @@ Create a comprehensive lesson with the following sections:
 IMPORTANT VOCABULARY GUIDELINES:
 - Use PRECISE, STANDARD vocabulary (not colloquial alternatives)
 - Use Taiwan Mandarin vocabulary (腳踏車 not 自行車, 醫生 not 大夫)
+- Taiwan Mandarin uses STANDARD MANDARIN GRAMMAR - do NOT use Taiwanese-only words like 看覓, 真好, 誠好, 足
 - Choose the most accurate word for the meaning:
   * For "sick": use 生病 (not 不舒服 which means "uncomfortable")
   * For "painful": use 痛 (not 疼)
+  * For "see/look": use 看 (not 看覓 which is Taiwanese)
   * For medical/formal contexts: use standard medical terms
 - Avoid overly casual or vague alternatives
 
@@ -1188,9 +1308,11 @@ Create a comprehensive lesson with the following sections:
 IMPORTANT VOCABULARY GUIDELINES:
 - Use PRECISE, STANDARD vocabulary (not colloquial alternatives)
 - Use Taiwan Mandarin vocabulary (腳踏車 not 自行車, 醫生 not 大夫)
+- Taiwan Mandarin uses STANDARD MANDARIN GRAMMAR - do NOT use Taiwanese-only words like 看覓, 真好, 誠好, 足
 - Choose the most accurate word for the meaning:
   * For "sick": use 生病 (not 不舒服 which means "uncomfortable")
   * For "painful": use 痛 (not 疼)
+  * For "see/look": use 看 (not 看覓 which is Taiwanese)
   * For medical/formal contexts: use standard medical terms
 - Avoid overly casual or vague alternatives
 
@@ -1273,7 +1395,7 @@ Now generate a complete module for "{theme}". Make the dialogue realistic and na
                     if current_section == 'vocabulary':
                         current_word['en'] = value
                     elif current_section == 'dialogue':
-                        current_line['english'] = value
+                        current_line['en'] = value
                 elif line_stripped.startswith('ZH:'):
                     value = line_stripped.replace('ZH:', '').strip()
                     if current_section == 'vocabulary':
@@ -1282,7 +1404,7 @@ Now generate a complete module for "{theme}". Make the dialogue realistic and na
                             module['vocabulary'].append(current_word.copy())
                     elif current_section == 'dialogue':
                         current_line['mandarin'] = value
-                        if current_line.get('english') and current_line.get('mandarin'):
+                        if current_line.get('en') and current_line.get('mandarin'):
                             module['dialogue'].append(current_line.copy())
 
             if not module['title'] or len(module['dialogue']) < 5:
