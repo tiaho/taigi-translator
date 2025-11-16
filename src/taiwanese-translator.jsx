@@ -185,9 +185,18 @@ export default function TaiwaneseTranslator() {
         audioRef.current.src = blobUrl;
         audioRef.current.load();
 
+        // Use addEventListener to preserve React's onEnded handler
         await new Promise((resolve, reject) => {
-          audioRef.current.onloadeddata = resolve;
-          audioRef.current.onerror = reject;
+          const onLoaded = () => {
+            audioRef.current.removeEventListener('loadeddata', onLoaded);
+            resolve();
+          };
+          const onError = () => {
+            audioRef.current.removeEventListener('error', onError);
+            reject();
+          };
+          audioRef.current.addEventListener('loadeddata', onLoaded);
+          audioRef.current.addEventListener('error', onError);
         });
 
         await audioRef.current.play();
@@ -517,10 +526,18 @@ export default function TaiwaneseTranslator() {
         audioRef.current.src = blobUrl;
         audioRef.current.load();
 
-        // Wait for the audio to be ready
+        // Use addEventListener to preserve React's onEnded handler
         await new Promise((resolve, reject) => {
-          audioRef.current.onloadeddata = resolve;
-          audioRef.current.onerror = reject;
+          const onLoaded = () => {
+            audioRef.current.removeEventListener('loadeddata', onLoaded);
+            resolve();
+          };
+          const onError = () => {
+            audioRef.current.removeEventListener('error', onError);
+            reject();
+          };
+          audioRef.current.addEventListener('loadeddata', onLoaded);
+          audioRef.current.addEventListener('error', onError);
         });
 
         await audioRef.current.play();
@@ -870,20 +887,22 @@ export default function TaiwaneseTranslator() {
         audioRef.current.src = blobUrl;
         audioRef.current.load();
 
-        // Wait for audio to be ready, then play
-        // Don't use Promise to avoid overwriting React's onEnded handler
-        audioRef.current.addEventListener('loadeddata', async function playOnce() {
-          try {
-            await audioRef.current.play();
-            console.log('Flashcard audio playing successfully');
-          } catch (playError) {
-            console.error('Play error:', playError);
-            setAudioError(`Playback failed: ${playError.message}`);
-            setIsSpeaking(false);
-          }
-          // Remove this one-time listener
-          audioRef.current.removeEventListener('loadeddata', playOnce);
-        }, { once: true });
+        // Use addEventListener to preserve React's onEnded handler
+        await new Promise((resolve, reject) => {
+          const onLoaded = () => {
+            audioRef.current.removeEventListener('loadeddata', onLoaded);
+            resolve();
+          };
+          const onError = () => {
+            audioRef.current.removeEventListener('error', onError);
+            reject();
+          };
+          audioRef.current.addEventListener('loadeddata', onLoaded);
+          audioRef.current.addEventListener('error', onError);
+        });
+
+        await audioRef.current.play();
+        console.log('Flashcard audio playing successfully');
       }
     } catch (error) {
       console.error('Flashcard audio error:', error);
@@ -956,6 +975,18 @@ export default function TaiwaneseTranslator() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      {/* Shared audio element for all audio playback */}
+      <audio
+        ref={audioRef}
+        onEnded={() => setIsSpeaking(false)}
+        onError={(e) => {
+          console.error('Audio playback error:', e);
+          setAudioError('Audio playback failed');
+          setIsSpeaking(false);
+        }}
+        className="hidden"
+      />
+
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8 pt-8">
@@ -1085,18 +1116,6 @@ export default function TaiwaneseTranslator() {
               {/* Taiwanese Audio for Taiwanese Input */}
               {sourceLanguage === 'taiwanese' && romanization && (
                 <div className="mt-2 space-y-2">
-                  {/* Hidden audio element for playback */}
-                  <audio
-                    ref={audioRef}
-                    onEnded={() => setIsSpeaking(false)}
-                    onError={(e) => {
-                      console.error('Audio playback error:', e);
-                      setAudioError('Audio playback failed');
-                      setIsSpeaking(false);
-                    }}
-                    className="hidden"
-                  />
-
                   <button
                     onClick={playTaiwaneseAudio}
                     disabled={isSpeaking}
@@ -1204,18 +1223,6 @@ export default function TaiwaneseTranslator() {
 
               {translatedText && (sourceLanguage === 'english' || sourceLanguage === 'mandarin') && (
                 <div className="space-y-2">
-                  {/* Hidden audio element for playback */}
-                  <audio
-                    ref={audioRef}
-                    onEnded={() => setIsSpeaking(false)}
-                    onError={(e) => {
-                      console.error('Audio playback error:', e);
-                      setAudioError('Audio playback failed');
-                      setIsSpeaking(false);
-                    }}
-                    className="hidden"
-                  />
-
                   {/* Taiwanese Audio Playback */}
                   {romanization && (
                     <button
