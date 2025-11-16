@@ -797,6 +797,7 @@ Generate 8-12 words related to "{topic}". Start now:"""
 def generate_module():
     """
     Generate a complete learning module for a given theme using Claude API
+    Then romanize using MOE Dictionary pipeline (same as rest of app)
     """
     try:
         data = request.json
@@ -825,7 +826,7 @@ Create a comprehensive lesson with the following sections:
 4. VOCABULARY: 10-12 essential words for this theme
 5. DIALOGUE: A 10-line natural conversation using this vocabulary
 
-Format EXACTLY as follows:
+Format EXACTLY as follows (NOTE: Do NOT include TAILO, it will be generated separately):
 
 TITLE: [Short title]
 
@@ -838,7 +839,6 @@ WORD:
 EN: [English]
 ZH: [Taiwan Mandarin with traditional characters - use Taiwan vocabulary like 腳踏車, not China Mandarin]
 TW: [Taiwanese with traditional characters]
-TAILO: [Tâi-lô romanization]
 [Repeat for 10-12 words]
 
 DIALOGUE:
@@ -846,7 +846,6 @@ LINE:
 EN: [English]
 ZH: [Taiwan Mandarin - use Taiwan vocabulary]
 TW: [Taiwanese]
-TAILO: [Tâi-lô romanization]
 [Repeat for exactly 10 lines - make it a natural conversation]
 
 Example for "At the Restaurant":
@@ -861,26 +860,22 @@ WORD:
 EN: Menu
 ZH: 菜單
 TW: 菜單
-TAILO: Tshài-tuann
 
 WORD:
 EN: Delicious
 ZH: 好吃
 TW: 好食
-TAILO: Hó-tsia̍h
 
 DIALOGUE:
 LINE:
 EN: Excuse me, can I see the menu?
 ZH: 不好意思，可以看菜單嗎？
 TW: 歹勢，會使看菜單無？
-TAILO: Pháinn-sè, ē-sái khuànn tshài-tuann bô?
 
 LINE:
 EN: I want beef noodles.
 ZH: 我要牛肉麵。
 TW: 我欲牛肉麵。
-TAILO: Guá beh gû-bah-mī.
 
 Now generate a complete module for "{theme}". Make the dialogue realistic and natural:"""
             }]
@@ -937,20 +932,14 @@ Now generate a complete module for "{theme}". Make the dialogue realistic and na
                 value = line_stripped.replace('TW:', '').strip()
                 if current_section == 'vocabulary':
                     current_word['han'] = value
-                elif current_section == 'dialogue':
-                    current_line['taiwanese'] = value
-            elif line_stripped.startswith('TAILO:'):
-                value = line_stripped.replace('TAILO:', '').strip()
-                if current_section == 'vocabulary':
-                    current_word['tailo'] = value
-                    # Word is complete
-                    if all(key in current_word for key in ['en', 'mandarin', 'han', 'tailo']):
+                    # Word is complete (no TAILO in Claude response)
+                    if all(key in current_word for key in ['en', 'mandarin', 'han']):
                         module['vocabulary'].append(current_word.copy())
                         current_word = {}
                 elif current_section == 'dialogue':
-                    current_line['tailo'] = value
-                    # Line is complete
-                    if all(key in current_line for key in ['en', 'mandarin', 'taiwanese', 'tailo']):
+                    current_line['taiwanese'] = value
+                    # Line is complete (no TAILO in Claude response)
+                    if all(key in current_line for key in ['en', 'mandarin', 'taiwanese']):
                         module['dialogue'].append(current_line.copy())
                         current_line = {}
 
@@ -959,6 +948,21 @@ Now generate a complete module for "{theme}". Make the dialogue realistic and na
             return jsonify({'error': 'Failed to generate complete module'}), 500
 
         print(f"✅ Generated module: {module['title']} with {len(module['vocabulary'])} words and {len(module['dialogue'])} dialogue lines")
+
+        # Now romanize all Taiwanese text using MOE Dictionary pipeline
+        print("📚 Romanizing vocabulary using MOE Dictionary pipeline...")
+        for word in module['vocabulary']:
+            taiwanese_text = word['han']
+            tailo, _ = get_taiwanese_romanization(taiwanese_text)
+            word['tailo'] = tailo
+            print(f"  {taiwanese_text} → {tailo}")
+
+        print("💬 Romanizing dialogue using MOE Dictionary pipeline...")
+        for line in module['dialogue']:
+            taiwanese_text = line['taiwanese']
+            tailo, _ = get_taiwanese_romanization(taiwanese_text)
+            line['tailo'] = tailo
+            print(f"  {taiwanese_text} → {tailo}")
 
         return jsonify({
             'success': True,
