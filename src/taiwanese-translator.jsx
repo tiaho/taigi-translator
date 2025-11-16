@@ -38,6 +38,10 @@ export default function TaiwaneseTranslator() {
   const [showFlashcards, setShowFlashcards] = useState(false);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [isCardFlipped, setIsCardFlipped] = useState(false);
+  const [flashcardViewMode, setFlashcardViewMode] = useState('study'); // 'study' or 'list'
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+  const [confirmDeleteCard, setConfirmDeleteCard] = useState(null); // stores card ID to delete
+  const [undoAction, setUndoAction] = useState(null); // stores last action for undo: {type, data}
   const [pronunciationGuide, setPronunciationGuide] = useState('');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [audioError, setAudioError] = useState('');
@@ -745,8 +749,15 @@ export default function TaiwaneseTranslator() {
   };
 
   const deleteFlashcard = (id) => {
+    const deletedCard = flashcards.find(card => card.id === id);
     const updatedFlashcards = flashcards.filter(card => card.id !== id);
     setFlashcards(updatedFlashcards);
+
+    // Store for undo
+    setUndoAction({
+      type: 'deleteCard',
+      data: { card: deletedCard, index: flashcards.findIndex(card => card.id === id) }
+    });
 
     try {
       localStorage.setItem('flashcards', JSON.stringify(updatedFlashcards));
@@ -759,6 +770,38 @@ export default function TaiwaneseTranslator() {
     if (currentCardIndex >= updatedFlashcards.length && currentCardIndex > 0) {
       setCurrentCardIndex(currentCardIndex - 1);
     }
+  };
+
+  const undoLastAction = () => {
+    if (!undoAction) return;
+
+    if (undoAction.type === 'deleteCard') {
+      // Restore single deleted card
+      const { card, index } = undoAction.data;
+      const updatedFlashcards = [...flashcards];
+      updatedFlashcards.splice(index, 0, card);
+      setFlashcards(updatedFlashcards);
+
+      try {
+        localStorage.setItem('flashcards', JSON.stringify(updatedFlashcards));
+        console.log('✅ Restored flashcard');
+      } catch (e) {
+        console.error('Error saving flashcards:', e);
+      }
+    } else if (undoAction.type === 'deleteAll') {
+      // Restore all deleted cards
+      setFlashcards(undoAction.data.cards);
+      setCurrentCardIndex(undoAction.data.currentIndex);
+
+      try {
+        localStorage.setItem('flashcards', JSON.stringify(undoAction.data.cards));
+        console.log('✅ Restored all flashcards');
+      } catch (e) {
+        console.error('Error saving flashcards:', e);
+      }
+    }
+
+    setUndoAction(null);
   };
 
   const shuffleFlashcards = () => {
@@ -1490,14 +1533,41 @@ export default function TaiwaneseTranslator() {
           {showFlashcards && (
             <div className="p-4 border-t">
               {flashcards.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <p className="mb-2">No flashcards yet!</p>
-                  <p className="text-sm">Add cards from translations or create from vocabulary lists.</p>
+                <div>
+                  {/* Undo button for empty state */}
+                  {undoAction && (
+                    <div className="mb-4">
+                      <button
+                        onClick={undoLastAction}
+                        className="w-full py-2 px-4 bg-green-600 text-white rounded-lg font-medium text-sm hover:bg-green-700 transition-colors animate-pulse"
+                      >
+                        ↶ Undo Delete {undoAction.type === 'deleteAll' ? `(${undoAction.data.cards.length} cards)` : 'Card'}
+                      </button>
+                    </div>
+                  )}
+                  <div className="text-center py-8 text-gray-500">
+                    <p className="mb-2">No flashcards yet!</p>
+                    <p className="text-sm">Add cards from translations or create from vocabulary lists.</p>
+                  </div>
                 </div>
               ) : (
                 <div>
                   {/* Flashcard Controls */}
                   <div className="flex gap-2 mb-4">
+                    <button
+                      onClick={() => setFlashcardViewMode(flashcardViewMode === 'study' ? 'list' : 'study')}
+                      className="flex-1 py-2 px-4 bg-purple-600 text-white rounded-lg font-medium text-sm hover:bg-purple-700 transition-colors"
+                    >
+                      {flashcardViewMode === 'study' ? '📋 View All' : '🎴 Study Mode'}
+                    </button>
+                    {undoAction && (
+                      <button
+                        onClick={undoLastAction}
+                        className="flex-1 py-2 px-4 bg-green-600 text-white rounded-lg font-medium text-sm hover:bg-green-700 transition-colors animate-pulse"
+                      >
+                        ↶ Undo {undoAction.type === 'deleteAll' ? `(${undoAction.data.cards.length} cards)` : ''}
+                      </button>
+                    )}
                     <button
                       onClick={shuffleFlashcards}
                       className="flex-1 py-2 px-4 bg-indigo-600 text-white rounded-lg font-medium text-sm hover:bg-indigo-700 transition-colors"
@@ -1506,19 +1576,37 @@ export default function TaiwaneseTranslator() {
                     </button>
                     <button
                       onClick={() => {
-                        if (confirm(`Delete all ${flashcards.length} flashcards?`)) {
+                        if (confirmDeleteAll) {
+                          // Store for undo
+                          setUndoAction({
+                            type: 'deleteAll',
+                            data: { cards: flashcards, currentIndex: currentCardIndex }
+                          });
+
                           setFlashcards([]);
                           localStorage.setItem('flashcards', JSON.stringify([]));
                           setCurrentCardIndex(0);
+                          setConfirmDeleteAll(false);
+                        } else {
+                          setConfirmDeleteAll(true);
+                          // Auto-cancel after 3 seconds
+                          setTimeout(() => setConfirmDeleteAll(false), 3000);
                         }
                       }}
-                      className="flex-1 py-2 px-4 bg-red-600 text-white rounded-lg font-medium text-sm hover:bg-red-700 transition-colors"
+                      className={`flex-1 py-2 px-4 rounded-lg font-medium text-sm transition-colors ${
+                        confirmDeleteAll
+                          ? 'bg-red-700 hover:bg-red-800 text-white animate-pulse'
+                          : 'bg-red-600 hover:bg-red-700 text-white'
+                      }`}
                     >
-                      🗑️ Clear All
+                      {confirmDeleteAll ? `⚠️ Confirm Delete ${flashcards.length} Cards?` : '🗑️ Clear All'}
                     </button>
                   </div>
 
-                  {/* Card Counter and Status */}
+                  {/* Study Mode View */}
+                  {flashcardViewMode === 'study' && (
+                    <>
+                      {/* Card Counter and Status */}
                   <div className="text-center mb-4">
                     <div className="flex items-center justify-center gap-2 mb-2">
                       <span className="text-sm font-medium text-gray-600">
@@ -1672,14 +1760,124 @@ export default function TaiwaneseTranslator() {
                   {/* Delete Current Card */}
                   <button
                     onClick={() => {
-                      if (confirm('Delete this flashcard?')) {
-                        deleteFlashcard(flashcards[currentCardIndex].id);
+                      const cardId = flashcards[currentCardIndex].id;
+                      if (confirmDeleteCard === cardId) {
+                        deleteFlashcard(cardId);
+                        setConfirmDeleteCard(null);
+                      } else {
+                        setConfirmDeleteCard(cardId);
+                        // Auto-cancel after 3 seconds
+                        setTimeout(() => setConfirmDeleteCard(null), 3000);
                       }
                     }}
-                    className="w-full py-2 px-4 bg-red-100 text-red-700 rounded-lg font-medium text-sm hover:bg-red-200 transition-colors"
+                    className={`w-full py-2 px-4 rounded-lg font-medium text-sm transition-colors ${
+                      confirmDeleteCard === flashcards[currentCardIndex].id
+                        ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse'
+                        : 'bg-red-100 hover:bg-red-200 text-red-700'
+                    }`}
                   >
-                    Delete Current Card
+                    {confirmDeleteCard === flashcards[currentCardIndex].id ? '⚠️ Confirm Delete?' : 'Delete Current Card'}
                   </button>
+                    </>
+                  )}
+
+                  {/* List View - All Flashcards */}
+                  {flashcardViewMode === 'list' && (
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {flashcards.map((card, index) => (
+                        <div
+                          key={card.id}
+                          className="border border-gray-200 rounded-lg p-4 hover:border-indigo-300 hover:shadow-md transition-all cursor-pointer"
+                          onClick={() => {
+                            setCurrentCardIndex(index);
+                            setFlashcardViewMode('study');
+                            setIsCardFlipped(false);
+                          }}
+                        >
+                          {/* Card Header */}
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-xs font-medium text-gray-500">Card {index + 1}</span>
+                            <div className="flex items-center gap-2">
+                              {/* Status Badge */}
+                              <span className={`text-xs px-2 py-1 rounded-full ${
+                                card.status === 'mastered'
+                                  ? 'bg-green-100 text-green-700'
+                                  : card.status === 'known'
+                                  ? 'bg-blue-100 text-blue-700'
+                                  : 'bg-yellow-100 text-yellow-700'
+                              }`}>
+                                {card.status === 'mastered' ? '⭐' : card.status === 'known' ? '✓' : '📚'}
+                              </span>
+                              {/* Delete Button */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (confirmDeleteCard === card.id) {
+                                    deleteFlashcard(card.id);
+                                    setConfirmDeleteCard(null);
+                                  } else {
+                                    setConfirmDeleteCard(card.id);
+                                    // Auto-cancel after 3 seconds
+                                    setTimeout(() => setConfirmDeleteCard(null), 3000);
+                                  }
+                                }}
+                                className={`text-xs p-1 rounded transition-colors ${
+                                  confirmDeleteCard === card.id
+                                    ? 'bg-red-600 text-white hover:bg-red-700'
+                                    : 'text-red-500 hover:text-red-700'
+                                }`}
+                                title={confirmDeleteCard === card.id ? 'Confirm delete?' : 'Delete'}
+                              >
+                                {confirmDeleteCard === card.id ? '⚠️' : '✕'}
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Front (English/Mandarin) */}
+                          <div className="mb-3">
+                            <p className="text-xs text-gray-500 mb-1">Front:</p>
+                            <p className="text-base font-semibold text-gray-800">{card.front}</p>
+                            {card.mandarin && (
+                              <p className="text-sm text-amber-700 font-serif mt-1">{card.mandarin}</p>
+                            )}
+                          </div>
+
+                          {/* Back (Taiwanese) */}
+                          <div className="mb-3">
+                            <p className="text-xs text-gray-500 mb-1">Back:</p>
+                            <p className="text-lg font-bold text-indigo-900 font-serif">{card.back}</p>
+                            <p className="text-xs text-gray-600 italic mt-1">{card.tailo}</p>
+                          </div>
+
+                          {/* Audio Button */}
+                          {card.tailo && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                playFlashcardAudio(card.tailo);
+                              }}
+                              disabled={isSpeaking}
+                              className={`w-full py-1 px-2 rounded text-xs flex items-center justify-center gap-1 ${
+                                isSpeaking
+                                  ? 'bg-green-400 cursor-not-allowed'
+                                  : 'bg-green-600 hover:bg-green-700'
+                              } text-white transition-colors`}
+                            >
+                              <Volume2 className={`w-3 h-3 ${isSpeaking ? 'animate-pulse' : ''}`} />
+                              <span>Play Audio</span>
+                            </button>
+                          )}
+
+                          {/* Next Review Date */}
+                          {card.nextReviewAt && (
+                            <p className="text-xs text-gray-400 mt-2 text-center">
+                              Next: {new Date(card.nextReviewAt).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
