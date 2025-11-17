@@ -16,8 +16,12 @@ A React-based web application for romanizing Taiwanese text, featuring Tâi-lô 
   - TauPhahJi fallback for comprehensive coverage
 - 📚 **Taiwan MOE Dictionary**: 16,579 entries (14,489 titles + 4,329 synonyms)
 - 🔍 **Smart Definition Search**: Finds Mandarin words (like 很) by searching dictionary definitions
-- 🔊 **Authentic Audio**: Taiwanese pronunciation via Hapsing API with caching
+- 🔊 **Authentic Audio**: Taiwanese pronunciation via Hapsing API with 3-tier caching
+  - In-memory cache (instant)
+  - Supabase cloud cache (fast, persistent)
+  - On-demand generation (fallback)
 - 💬 **Common Phrases**: Pre-loaded phrases with instant audio playback
+- 🎯 **Smart Audio Priority**: Pre-generated audio for 3000+ most common words using intelligent scoring
 
 ### Learning Tools
 - 🃏 **Flashcard System**: Spaced Repetition System (SRS) for effective learning
@@ -75,12 +79,18 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Edit `.env` and add your Anthropic API key:
+Edit `.env` and add your API keys:
 ```
 ANTHROPIC_API_KEY=your_actual_api_key_here
+
+# Optional: Supabase for audio caching (recommended for faster audio)
+SUPABASE_URL=your_project_url_here
+SUPABASE_KEY=your_service_role_key_here
 ```
 
-Get your API key from: https://console.anthropic.com/
+Get your Anthropic API key from: https://console.anthropic.com/
+
+For Supabase setup (optional but recommended), see [SUPABASE_SETUP.md](./SUPABASE_SETUP.md)
 
 ### Development
 
@@ -193,8 +203,13 @@ Explore pre-loaded common phrases with audio in the expandable section at the bo
 - **MOE Dictionary** - Taiwan Ministry of Education Taiwanese Dictionary (g0v/moedict-data-twblg)
 - **TauPhahJi-Command** - Taiwanese romanization fallback
 - **Hapsing API** - Taiwanese audio
+- **Supabase** - Cloud storage for audio caching (optional)
 - **Claude API** - English to BOTH Taiwan Mandarin (國語) and Taiwanese (台語) with vocabulary differences
 - **Gunicorn** - Production WSGI server
+
+### Learning Resources
+- **15-Unit Curriculum** - Comprehensive lesson plan from beginner to advanced (see [LESSON_PLAN.md](./LESSON_PLAN.md))
+- **Smart Prioritization** - AI-scored dictionary ranking for efficient audio pre-generation
 
 ## Deployment
 
@@ -254,9 +269,11 @@ git push -u origin main
   - 750 hours/month free tier (sufficient for one service running 24/7)
 
 - **Audio caching:**
-  - Audio cache is in-memory only
-  - Cache resets when service spins down
-  - First audio request after spin-down may be slow (10-20 seconds)
+  - 3-tier caching system: In-memory → Supabase → Hapsing API
+  - Optional Supabase integration for persistent cloud caching
+  - Add `SUPABASE_URL` and `SUPABASE_KEY` to backend environment variables for faster audio
+  - Without Supabase: In-memory cache resets on spin-down
+  - First audio request may be slow (10-20 seconds) without Supabase cache
 
 - **API costs:**
   - Anthropic Claude API usage is billed separately

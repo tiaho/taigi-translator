@@ -7,6 +7,13 @@ from pypinyin import pinyin, Style
 import os
 import json
 
+# Supabase for audio caching (optional)
+try:
+    from supabase import create_client, Client
+    SUPABASE_AVAILABLE = True
+except ImportError:
+    SUPABASE_AVAILABLE = False
+
 # Load environment variables
 load_dotenv()
 
@@ -25,6 +32,19 @@ CORS(app)
 
 # Simple in-memory cache for audio
 audio_cache = {}
+
+# Initialize Supabase client (optional - for audio caching)
+supabase_client = None
+if SUPABASE_AVAILABLE:
+    supabase_url = os.getenv('SUPABASE_URL')
+    supabase_key = os.getenv('SUPABASE_KEY')
+    if supabase_url and supabase_key:
+        try:
+            supabase_client = create_client(supabase_url, supabase_key)
+            print("✓ Supabase client initialized for audio caching")
+        except Exception as e:
+            print(f"⚠️  Supabase initialization failed: {e}")
+            print("   Audio will fall back to on-demand generation")
 
 # Character variant mapping (Mandarin → Taiwanese variants)
 CHAR_VARIANTS = {
@@ -941,8 +961,8 @@ def translate():
 @app.route('/api/audio', methods=['GET'])
 def get_audio():
     """
-    Proxy audio requests to Hapsing API to avoid CORS issues
-    Uses caching to speed up repeated requests
+    Get audio for Taiwanese text
+    Priority: In-memory cache → Supabase cache → Hapsing API
     """
     try:
         taibun = request.args.get('taibun', '')
@@ -950,34 +970,50 @@ def get_audio():
         if not taibun:
             return jsonify({'error': 'No taibun parameter provided'}), 400
 
-        # Check cache first
+        # 1. Check in-memory cache first (fastest)
         if taibun in audio_cache:
-            print(f"Returning cached audio for: {taibun}")
-            from flask import Response
+            print(f"✓ Returning in-memory cached audio for: {taibun}")
             return Response(audio_cache[taibun], mimetype='audio/mpeg')
 
-        print(f"Fetching audio for: {taibun}")
+        # 2. Check Supabase cache (fast)
+        if supabase_client:
+            try:
+                result = supabase_client.table('audio_cache').select('storage_path').eq('tailo_text', taibun).execute()
+                if result.data and len(result.data) > 0:
+                    storage_path = result.data[0]['storage_path']
+                    supabase_url = os.getenv('SUPABASE_URL')
+                    audio_url = f"{supabase_url}/storage/v1/object/public/taiwanese-audio/{storage_path}"
+                    print(f"✓ Found in Supabase cache: {taibun}")
+                    print(f"  Redirecting to: {audio_url}")
 
-        # Fetch audio from Hapsing API
+                    # Fetch and cache in memory for next time
+                    import urllib.request
+                    response = urllib.request.urlopen(audio_url, timeout=10)
+                    audio_data = response.read()
+                    audio_cache[taibun] = audio_data
+
+                    return Response(audio_data, mimetype='audio/mpeg')
+            except Exception as e:
+                print(f"⚠️  Supabase lookup failed: {e}")
+                # Continue to Hapsing API fallback
+
+        # 3. Fetch from Hapsing API (slow, 10-20s first time)
+        print(f"⏳ Fetching from Hapsing API: {taibun}")
         import urllib.request
         audio_url = f"https://hapsing.ithuan.tw/bangtsam?taibun={urllib.parse.quote(taibun)}"
-        print(f"Audio URL: {audio_url}")
 
         response = urllib.request.urlopen(audio_url, timeout=20)
         audio_data = response.read()
+        print(f"✓ Fetched {len(audio_data)} bytes from Hapsing API")
 
-        print(f"Audio data size: {len(audio_data)} bytes")
-
-        # Cache the audio data
+        # Cache in memory
         audio_cache[taibun] = audio_data
-        print(f"Cached audio. Cache size: {len(audio_cache)} entries")
+        print(f"  Cached in memory ({len(audio_cache)} entries)")
 
-        # Return audio data with proper content type
-        from flask import Response
         return Response(audio_data, mimetype='audio/mpeg')
 
     except Exception as e:
-        print(f"Error fetching audio: {str(e)}")
+        print(f"❌ Error fetching audio: {str(e)}")
         import traceback
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500

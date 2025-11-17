@@ -32,13 +32,19 @@ TaigiApp is a full-stack Taiwanese translator web application built with React a
   - Taiwan Mandarin: Uses Taiwan vocabulary (腳踏車, 很好, 吃飯)
   - Taiwanese: Uses Taiwanese vocabulary (跤踏車, 真好/誠好/足好, 食飯)
 - **Character Normalization**: Mandarin → Taiwanese variant mapping (腳 → 跤)
-- **Audio**: Hapsing API (with server-side proxy and caching)
+- **Audio**: 3-tier caching system
+  - In-memory cache (instant)
+  - Supabase cloud cache (fast, persistent, optional)
+  - Hapsing API (on-demand generation)
+- **Audio Priority**: Intelligent dictionary scoring for pre-generation (3000+ words)
+- **Cloud Storage**: Supabase (PostgreSQL + Storage) for persistent audio caching
 - **Production Server**: Gunicorn WSGI
 - **Language**: Python 3.8+
 
 ### Infrastructure
 - **Development**: Vite dev server + Flask dev server
 - **Production**: Render (free tier) - Static frontend + Python backend
+- **Storage**: Supabase (optional) - Audio file CDN + metadata database
 - **Environment Variables**: python-dotenv for local, Render dashboard for production
 
 ## Project Structure
@@ -51,8 +57,15 @@ TaigiApp/
 │   ├── taiwanese-translator.jsx # Main translator component
 │   └── index.css             # Tailwind CSS imports
 ├── backend/                  # Python Flask backend
-│   ├── app.py                # Flask API server with MOE dict, TauPhahJi, Claude API, audio proxy
-│   └── moedict-twblg.json    # Taiwan MOE Dictionary (7.4MB, 14,489 entries)
+│   ├── app.py                # Flask API server with MOE dict, TauPhahJi, Claude API, Supabase
+│   ├── moedict-twblg.json    # Taiwan MOE Dictionary (7.4MB, 14,489 entries)
+│   ├── data/                 # Data files
+│   │   └── priority_entries.json  # Ranked dictionary entries (3000 words)
+│   └── scripts/              # Utility scripts
+│       ├── rank_dictionary_entries.py  # Score & rank dictionary words
+│       ├── setup_supabase.py          # Initialize Supabase database & storage
+│       ├── generate_audio_supabase.py # Pre-generate audio to Supabase
+│       └── test_supabase_audio.py     # Test Supabase audio cache
 ├── venv/                     # Python virtual environment (not in git)
 ├── dist/                     # Production build output (not in git)
 ├── node_modules/             # Node.js dependencies (not in git)
@@ -65,6 +78,8 @@ TaigiApp/
 ├── tailwind.config.js        # Tailwind CSS configuration
 ├── postcss.config.js         # PostCSS configuration
 ├── render.yaml               # Deployment configuration for Render
+├── LESSON_PLAN.md            # 15-unit Taiwanese learning curriculum
+├── SUPABASE_SETUP.md         # Guide for setting up Supabase audio caching
 └── .gitignore                # Git ignore rules (includes .env)
 ```
 
@@ -92,10 +107,16 @@ pip install -r requirements.txt
 ```bash
 cp .env.example .env
 ```
-Edit `.env` and add your Anthropic API key:
+Edit `.env` and add your API keys:
 ```
 ANTHROPIC_API_KEY=your_actual_api_key_here
+
+# Optional: Supabase for persistent audio caching
+SUPABASE_URL=your_project_url_here
+SUPABASE_KEY=your_service_role_key_here
 ```
+
+See [SUPABASE_SETUP.md](./SUPABASE_SETUP.md) for detailed Supabase setup instructions.
 
 ### Running the Application
 
