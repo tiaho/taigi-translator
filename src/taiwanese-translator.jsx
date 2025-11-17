@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeftRight, Volume2, BookOpen, Loader2, Languages, Library } from 'lucide-react';
+import { ArrowLeftRight, Volume2, BookOpen, Loader2, Languages, Library, Home, CreditCard, GraduationCap, BookMarked, MessageSquare } from 'lucide-react';
 
 export default function TaiwaneseTranslator() {
   const [inputText, setInputText] = useState('');
@@ -10,8 +10,6 @@ export default function TaiwaneseTranslator() {
   const [hanCharacters, setHanCharacters] = useState('');
   const [sourceLanguage, setSourceLanguage] = useState('english');
   const [isLoading, setIsLoading] = useState(false);
-  const [showPhrases, setShowPhrases] = useState(false);
-  const [showVocab, setShowVocab] = useState(false);
   const [selectedVocabCategory, setSelectedVocabCategory] = useState('Numbers');
   const [customTopic, setCustomTopic] = useState('');
   const [isGeneratingVocab, setIsGeneratingVocab] = useState(false);
@@ -35,14 +33,12 @@ export default function TaiwaneseTranslator() {
       return [];
     }
   });
-  const [showFlashcards, setShowFlashcards] = useState(false);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [isCardFlipped, setIsCardFlipped] = useState(false);
   const [flashcardViewMode, setFlashcardViewMode] = useState('study'); // 'study' or 'list'
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
   const [confirmDeleteCard, setConfirmDeleteCard] = useState(null); // stores card ID to delete
   const [undoAction, setUndoAction] = useState(null); // stores last action for undo: {type, data}
-  const [showLearningModules, setShowLearningModules] = useState(false);
   const [learningModules, setLearningModules] = useState(() => {
     // Load learning modules from localStorage on mount
     try {
@@ -60,6 +56,7 @@ export default function TaiwaneseTranslator() {
   const [pronunciationGuide, setPronunciationGuide] = useState('');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [audioError, setAudioError] = useState('');
+  const [activeSection, setActiveSection] = useState('translator'); // 'translator', 'flashcards', 'modules', 'vocabulary', 'phrases'
   const audioRef = React.useRef(null);
   const debounceTimerRef = React.useRef(null);
 
@@ -641,7 +638,7 @@ export default function TaiwaneseTranslator() {
       setHanCharacters(phrase.han);
       setPronunciationGuide(phrase.pronunciation);
     }
-    setShowPhrases(false);
+    setActiveSection('translator');
   };
 
   const insertVocabWord = (word) => {
@@ -663,7 +660,7 @@ export default function TaiwaneseTranslator() {
       setRomanization('');
       setHanCharacters('');
     }
-    setShowVocab(false);
+    setActiveSection('translator');
   };
 
   const deleteCustomVocabList = (topicName) => {
@@ -1166,7 +1163,7 @@ export default function TaiwaneseTranslator() {
 
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-8 pt-8">
+        <div className="text-center mb-6 pt-8">
           <div className="flex items-center justify-center gap-3 mb-2">
             <Languages className="w-10 h-10 text-indigo-600" />
             <h1 className="text-4xl font-bold text-gray-800">Taiwanese Translator</h1>
@@ -1174,7 +1171,79 @@ export default function TaiwaneseTranslator() {
           <p className="text-gray-600">台語翻譯 • Tâi-gí Hoan-e̍k</p>
         </div>
 
+        {/* Navigation Tabs */}
+        <div className="flex justify-center mb-6">
+          <div className="inline-flex bg-white rounded-lg shadow-lg p-1 gap-1">
+            <button
+              onClick={() => setActiveSection('translator')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
+                activeSection === 'translator'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <Home className="w-4 h-4" />
+              <span className="font-medium">Translator</span>
+            </button>
+            <button
+              onClick={() => setActiveSection('flashcards')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
+                activeSection === 'flashcards'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <CreditCard className="w-4 h-4" />
+              <span className="font-medium">Flashcards</span>
+              {flashcards.length > 0 && (
+                <span className="text-xs bg-purple-200 text-purple-800 px-2 py-0.5 rounded-full">
+                  {flashcards.length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveSection('modules')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
+                activeSection === 'modules'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <GraduationCap className="w-4 h-4" />
+              <span className="font-medium">Learning</span>
+              {learningModules.length > 0 && (
+                <span className="text-xs bg-indigo-200 text-indigo-800 px-2 py-0.5 rounded-full">
+                  {learningModules.length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveSection('vocabulary')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
+                activeSection === 'vocabulary'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <BookMarked className="w-4 h-4" />
+              <span className="font-medium">Vocabulary</span>
+            </button>
+            <button
+              onClick={() => setActiveSection('phrases')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
+                activeSection === 'phrases'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <MessageSquare className="w-4 h-4" />
+              <span className="font-medium">Phrases</span>
+            </button>
+          </div>
+        </div>
+
         {/* Main Translation Card */}
+        {activeSection === 'translator' && (
         <div className="bg-white rounded-lg shadow-xl overflow-hidden">
           {/* Language Selector */}
           <div className="bg-gray-50 p-4 border-b flex items-center justify-between">
@@ -1446,22 +1515,17 @@ export default function TaiwaneseTranslator() {
             </div>
           </div>
         </div>
+        )}
 
         {/* Common Phrases Section */}
+        {activeSection === 'phrases' && (
         <div className="mt-6 bg-white rounded-lg shadow-md overflow-hidden">
-          <button
-            onClick={() => setShowPhrases(!showPhrases)}
-            className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-          >
-            <div className="flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-indigo-600" />
-              <span className="font-medium text-gray-800">Common Phrases</span>
-            </div>
-            <span className="text-gray-400">{showPhrases ? '−' : '+'}</span>
-          </button>
-          
-          {showPhrases && (
-            <div className="p-4 border-t grid gap-2">
+          <div className="w-full p-4 flex items-center gap-2 bg-gray-50">
+            <BookOpen className="w-5 h-5 text-indigo-600" />
+            <span className="font-medium text-gray-800">Common Phrases</span>
+          </div>
+
+          <div className="p-4 border-t grid gap-2">
               {commonPhrases.map((phrase, index) => (
                 <div
                   key={index}
@@ -1494,25 +1558,19 @@ export default function TaiwaneseTranslator() {
                   </div>
                 </div>
               ))}
-            </div>
-          )}
+          </div>
         </div>
+        )}
 
         {/* Vocabulary Lists Section */}
+        {activeSection === 'vocabulary' && (
         <div className="mt-6 bg-white rounded-lg shadow-md overflow-hidden">
-          <button
-            onClick={() => setShowVocab(!showVocab)}
-            className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-          >
-            <div className="flex items-center gap-2">
-              <Library className="w-5 h-5 text-indigo-600" />
-              <span className="font-medium text-gray-800">Vocabulary Lists</span>
-            </div>
-            <span className="text-gray-400">{showVocab ? '−' : '+'}</span>
-          </button>
+          <div className="w-full p-4 flex items-center gap-2 bg-gray-50">
+            <Library className="w-5 h-5 text-indigo-600" />
+            <span className="font-medium text-gray-800">Vocabulary Lists</span>
+          </div>
 
-          {showVocab && (
-            <div className="p-4 border-t">
+          <div className="p-4 border-t">
               {/* Custom Topic Generator */}
               <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
                 <h3 className="text-sm font-semibold text-purple-800 mb-2">✨ Generate Custom Vocabulary</h3>
@@ -1640,32 +1698,26 @@ export default function TaiwaneseTranslator() {
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+          </div>
         </div>
+        )}
 
         {/* Flashcards Section */}
+        {activeSection === 'flashcards' && (
         <div className="mt-6 bg-white rounded-lg shadow-md overflow-hidden">
-          <button
-            onClick={() => setShowFlashcards(!showFlashcards)}
-            className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">🎴</span>
-              <span className="font-medium text-gray-800">
-                Flashcards {flashcards.length > 0 && `(${flashcards.length})`}
+          <div className="w-full p-4 flex items-center gap-2 bg-gray-50">
+            <span className="text-2xl">🎴</span>
+            <span className="font-medium text-gray-800">
+              Flashcards {flashcards.length > 0 && `(${flashcards.length})`}
+            </span>
+            {flashcards.length > 0 && (
+              <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
+                {getDueCards().length} due
               </span>
-              {flashcards.length > 0 && (
-                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
-                  {getDueCards().length} due
-                </span>
-              )}
-            </div>
-            <span className="text-gray-400">{showFlashcards ? '−' : '+'}</span>
-          </button>
+            )}
+          </div>
 
-          {showFlashcards && (
-            <div className="p-4 border-t">
+          <div className="p-4 border-t">
               {flashcards.length === 0 ? (
                 <div>
                   {/* Undo button for empty state */}
@@ -2014,26 +2066,20 @@ export default function TaiwaneseTranslator() {
                   )}
                 </div>
               )}
-            </div>
-          )}
+          </div>
         </div>
+        )}
 
         {/* Learning Modules Section */}
+        {activeSection === 'modules' && (
         <div className="mt-6 bg-white rounded-lg shadow-md overflow-hidden">
-          <button
-            onClick={() => setShowLearningModules(!showLearningModules)}
-            className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-          >
-            <div className="flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-indigo-600" />
-              <span className="font-medium text-gray-800">Contextual Learning Modules</span>
-              <span className="text-xs text-gray-500">({learningModules.length} modules)</span>
-            </div>
-            <span className="text-gray-400">{showLearningModules ? '−' : '+'}</span>
-          </button>
+          <div className="w-full p-4 flex items-center gap-2 bg-gray-50">
+            <BookOpen className="w-5 h-5 text-indigo-600" />
+            <span className="font-medium text-gray-800">Contextual Learning Modules</span>
+            <span className="text-xs text-gray-500">({learningModules.length} modules)</span>
+          </div>
 
-          {showLearningModules && (
-            <div className="p-4 border-t">
+          <div className="p-4 border-t">
               {/* Theme Generator */}
               <div className="mb-6 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-200">
                 <h3 className="text-sm font-semibold text-indigo-800 mb-2">✨ Generate Learning Module</h3>
@@ -2200,9 +2246,9 @@ export default function TaiwaneseTranslator() {
                   ))}
                 </div>
               )}
-            </div>
-          )}
+          </div>
         </div>
+        )}
 
         {/* Footer */}
         <div className="mt-8 text-center text-sm text-gray-600 pb-8">
