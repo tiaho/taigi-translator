@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeftRight, Volume2, BookOpen, Loader2, Languages, Library, Home, CreditCard, GraduationCap, BookMarked, MessageSquare } from 'lucide-react';
+import { ArrowLeftRight, Volume2, BookOpen, Loader2, Languages, Library, Home, CreditCard, GraduationCap, BookMarked, MessageSquare, Mic, Trash2, Play, Square } from 'lucide-react';
 
 export default function TaiwaneseTranslator() {
   const [inputText, setInputText] = useState('');
@@ -57,6 +57,34 @@ export default function TaiwaneseTranslator() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [audioError, setAudioError] = useState('');
   const [activeSection, setActiveSection] = useState('translator'); // 'translator', 'flashcards', 'modules', 'vocabulary', 'phrases'
+
+  // Voice Recording States
+  const [recordings, setRecordings] = useState(() => {
+    // Load recordings from localStorage on mount
+    try {
+      const saved = localStorage.getItem('voiceRecordings');
+      if (saved) {
+        // Convert base64 back to blob URLs
+        const savedRecordings = JSON.parse(saved);
+        const restoredRecordings = {};
+        Object.keys(savedRecordings).forEach(key => {
+          // We'll recreate blob URLs on playback instead of storing them
+          restoredRecordings[key] = savedRecordings[key]; // Keep base64 data
+        });
+        return restoredRecordings;
+      }
+      return {};
+    } catch (e) {
+      console.error('Error loading recordings:', e);
+      return {};
+    }
+  });
+  const [recordingWordKey, setRecordingWordKey] = useState(null); // Tailo of word being recorded
+  const [isPlayingRecording, setIsPlayingRecording] = useState(null); // Tailo of recording being played
+  const mediaRecorderRef = React.useRef(null);
+  const recordingChunksRef = React.useRef([]);
+  const userAudioRef = React.useRef(null); // Separate ref for user recording playback
+
   const audioRef = React.useRef(null);
   const debounceTimerRef = React.useRef(null);
 
@@ -622,6 +650,114 @@ export default function TaiwaneseTranslator() {
     });
   };
 
+  // Voice Recording Functions
+  const startRecording = async (wordKey) => {
+    try {
+      // Request microphone permission
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 44100
+        }
+      });
+
+      // Create MediaRecorder instance
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4'
+      });
+
+      recordingChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordingChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const blob = new Blob(recordingChunksRef.current, { type: 'audio/webm' });
+
+        // Convert blob to base64 for localStorage
+        const reader = new FileReader();
+        reader.readAsDataURL(blob);
+        reader.onloadend = () => {
+          const base64data = reader.result;
+
+          // Save to state and localStorage
+          setRecordings(prev => {
+            const updated = { ...prev, [wordKey]: base64data };
+            try {
+              localStorage.setItem('voiceRecordings', JSON.stringify(updated));
+            } catch (e) {
+              console.error('Error saving recording to localStorage:', e);
+            }
+            return updated;
+          });
+        };
+
+        // Stop all tracks to release microphone
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      mediaRecorderRef.current = mediaRecorder;
+      setRecordingWordKey(wordKey);
+
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      alert('Could not access microphone. Please check your browser permissions.');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+      setRecordingWordKey(null);
+    }
+  };
+
+  const playRecording = (wordKey) => {
+    const recording = recordings[wordKey];
+    if (!recording || !userAudioRef.current) return;
+
+    // Stop any currently playing recording
+    if (isPlayingRecording) {
+      userAudioRef.current.pause();
+      userAudioRef.current.currentTime = 0;
+    }
+
+    userAudioRef.current.src = recording;
+    userAudioRef.current.play()
+      .then(() => {
+        setIsPlayingRecording(wordKey);
+      })
+      .catch(error => {
+        console.error('Error playing recording:', error);
+      });
+  };
+
+  const deleteRecording = (wordKey) => {
+    setRecordings(prev => {
+      const updated = { ...prev };
+      delete updated[wordKey];
+      try {
+        localStorage.setItem('voiceRecordings', JSON.stringify(updated));
+      } catch (e) {
+        console.error('Error updating localStorage:', e);
+      }
+      return updated;
+    });
+
+    if (isPlayingRecording === wordKey) {
+      setIsPlayingRecording(null);
+      if (userAudioRef.current) {
+        userAudioRef.current.pause();
+        userAudioRef.current.currentTime = 0;
+      }
+    }
+  };
+
   const insertPhrase = (phrase) => {
     setMandarinText(''); // Clear Mandarin intermediate step for phrases
     setPinyin(''); // Clear Pinyin for phrases
@@ -1161,6 +1297,17 @@ export default function TaiwaneseTranslator() {
         className="hidden"
       />
 
+      {/* User recording audio element */}
+      <audio
+        ref={userAudioRef}
+        onEnded={() => setIsPlayingRecording(null)}
+        onError={(e) => {
+          console.error('User recording playback error:', e);
+          setIsPlayingRecording(null);
+        }}
+        className="hidden"
+      />
+
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-6 pt-8">
@@ -1658,45 +1805,117 @@ export default function TaiwaneseTranslator() {
 
               {/* Vocabulary Words */}
               <div className="grid md:grid-cols-2 gap-3">
-                {(vocabularyLists[selectedVocabCategory] || customVocabLists[selectedVocabCategory] || []).map((word, index) => (
-                  <div
-                    key={index}
-                    className="p-3 bg-gray-50 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
-                    onClick={() => insertVocabWord(word)}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-800">{word.en}</p>
-                        <div className="flex gap-3 mt-1">
-                          <div>
-                            <p className="text-xs text-gray-500">Mandarin</p>
-                            <p className="text-base text-amber-700">{word.mandarin}</p>
+                {(vocabularyLists[selectedVocabCategory] || customVocabLists[selectedVocabCategory] || []).map((word, index) => {
+                  const wordKey = word.tailo;
+                  const hasRecording = recordings[wordKey];
+                  const isRecordingThis = recordingWordKey === wordKey;
+                  const isPlayingThis = isPlayingRecording === wordKey;
+
+                  return (
+                    <div
+                      key={index}
+                      className="p-3 bg-gray-50 hover:bg-indigo-50 rounded-lg transition-colors"
+                    >
+                      <div className="flex justify-between items-start gap-2">
+                        <div
+                          className="flex-1 cursor-pointer"
+                          onClick={() => insertVocabWord(word)}
+                        >
+                          <p className="font-medium text-gray-800">{word.en}</p>
+                          <div className="flex gap-3 mt-1">
+                            <div>
+                              <p className="text-xs text-gray-500">Mandarin</p>
+                              <p className="text-base text-amber-700">{word.mandarin}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500">Taiwanese</p>
+                              <p className="text-base text-indigo-700">{word.han}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-xs text-gray-500">Taiwanese</p>
-                            <p className="text-base text-indigo-700">{word.han}</p>
-                          </div>
+                          <p className="text-xs text-gray-600 mt-1">Tâi-lô: {word.tailo}</p>
                         </div>
-                        <p className="text-xs text-gray-600 mt-1">Tâi-lô: {word.tailo}</p>
+
+                        {/* Audio Controls */}
+                        <div className="flex flex-col gap-1">
+                          {/* Play authentic audio button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              playPhraseAudio({ tailo: word.tailo });
+                            }}
+                            disabled={isSpeaking}
+                            className={`p-2 rounded-lg transition-colors ${
+                              isSpeaking
+                                ? 'bg-green-400 cursor-not-allowed'
+                                : 'bg-green-600 hover:bg-green-700'
+                            } text-white`}
+                            title="Play authentic Taiwanese audio"
+                          >
+                            <Volume2 className={`w-3 h-3 ${isSpeaking ? 'animate-pulse' : ''}`} />
+                          </button>
+
+                          {/* Record/Stop recording button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (isRecordingThis) {
+                                stopRecording();
+                              } else {
+                                startRecording(wordKey);
+                              }
+                            }}
+                            className={`p-2 rounded-lg transition-colors ${
+                              isRecordingThis
+                                ? 'bg-red-600 hover:bg-red-700 animate-pulse'
+                                : 'bg-blue-600 hover:bg-blue-700'
+                            } text-white`}
+                            title={isRecordingThis ? 'Stop recording' : 'Record your voice'}
+                          >
+                            {isRecordingThis ? (
+                              <Square className="w-3 h-3" />
+                            ) : (
+                              <Mic className="w-3 h-3" />
+                            )}
+                          </button>
+
+                          {/* Play user recording button (only show if recording exists) */}
+                          {hasRecording && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                playRecording(wordKey);
+                              }}
+                              className={`p-2 rounded-lg transition-colors ${
+                                isPlayingThis
+                                  ? 'bg-purple-400 cursor-not-allowed'
+                                  : 'bg-purple-600 hover:bg-purple-700'
+                              } text-white`}
+                              title="Play your recording"
+                            >
+                              <Play className={`w-3 h-3 ${isPlayingThis ? 'animate-pulse' : ''}`} />
+                            </button>
+                          )}
+
+                          {/* Delete recording button (only show if recording exists) */}
+                          {hasRecording && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm('Delete your recording?')) {
+                                  deleteRecording(wordKey);
+                                }
+                              }}
+                              className="p-2 rounded-lg transition-colors bg-gray-500 hover:bg-red-600 text-white"
+                              title="Delete your recording"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          playPhraseAudio({ tailo: word.tailo });
-                        }}
-                        disabled={isSpeaking}
-                        className={`p-2 rounded-lg transition-colors ${
-                          isSpeaking
-                            ? 'bg-green-400 cursor-not-allowed'
-                            : 'bg-green-600 hover:bg-green-700'
-                        } text-white`}
-                        title="Play Taiwanese audio"
-                      >
-                        <Volume2 className={`w-3 h-3 ${isSpeaking ? 'animate-pulse' : ''}`} />
-                      </button>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
           </div>
         </div>
