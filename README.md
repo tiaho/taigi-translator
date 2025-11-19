@@ -48,12 +48,19 @@ A React-based web application for romanizing Taiwanese text, featuring Tâi-lô 
 ### User Experience
 - 🌐 **Clean, Modern UI**: Built with Tailwind CSS
 - ⚡ **Real-time Streaming**: Server-Sent Events for live module generation
-- 📱 **Responsive Design**: Works on desktop and mobile
+- 📱 **Fully Responsive Design**: Optimized for mobile and desktop
+  - Icon-only navigation on mobile for space efficiency
+  - Touch-friendly buttons with larger tap targets (44px+)
+  - Responsive text sizing (scales from mobile to desktop)
+  - Stacked layouts on mobile, side-by-side on desktop
+  - Scrollable tabs with hidden scrollbars for clean mobile UX
+  - Optimized spacing and padding for different screen sizes
 - 🐍 **Python Backend**: MOE Dictionary, TauPhahJi-Command, and Claude API
 - 📋 **Smart Navigation**: Main menu with dropdown for advanced features
   - **Main tabs**: Translator, Lessons, Flashcards
   - **More dropdown**: Learning Modules, Vocabulary Lists, Common Phrases
   - **Units page**: Organized lesson selection with unit structure
+  - **Mobile-optimized**: Icon-only buttons on small screens, full labels on desktop
 
 ## Setup
 

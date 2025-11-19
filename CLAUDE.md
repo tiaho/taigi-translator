@@ -222,6 +222,17 @@ Preview the production build locally.
     - **Active indicators**: Highlights current section, "More" button highlights when dropdown items active
     - **Animated chevron**: Rotates when dropdown opens/closes
 18. **Clean UI**: No external popups or links - all functionality embedded in the app
+19. **Fully Mobile Responsive**: Optimized for both mobile and desktop devices
+    - **Icon-only navigation** on mobile (text labels hidden with `hidden sm:inline`)
+    - **Touch-friendly targets**: 44px+ button heights for better mobile UX
+    - **Responsive text scaling**: `text-2xl md:text-4xl` pattern throughout
+    - **Adaptive layouts**: Stacked on mobile (`flex-col`), side-by-side on desktop (`md:flex-row`)
+    - **Responsive grids**: Vertical dividers on mobile (`divide-y`), horizontal on desktop (`md:divide-x md:divide-y-0`)
+    - **Scrollable tabs**: Horizontal scroll with hidden scrollbars (`overflow-x-auto scrollbar-hide`)
+    - **Optimized spacing**: Reduced padding on mobile (`p-3 md:p-6`), larger on desktop
+    - **Flexible components**: All major sections (header, navigation, lessons, flashcards) scale appropriately
+    - **CSS utilities**: Custom `.scrollbar-hide` class for cleaner mobile scroll experience
+    - **Breakpoints**: Uses Tailwind's `sm:` (640px), `md:` (768px) responsive prefixes
 
 ## Architecture
 
