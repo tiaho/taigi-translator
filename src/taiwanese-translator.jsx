@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeftRight, Volume2, BookOpen, Loader2, Languages, Library, Home, CreditCard, GraduationCap, BookMarked, MessageSquare, ChevronDown, MoreHorizontal } from 'lucide-react';
+import { ArrowLeftRight, Volume2, BookOpen, Loader2, Languages, Library, Home, CreditCard, GraduationCap, BookMarked, MessageSquare, ChevronDown, MoreHorizontal, Trophy, CheckCircle, XCircle, RotateCcw } from 'lucide-react';
 import LessonViewer from './components/LessonViewer';
 
 export default function TaiwaneseTranslator() {
@@ -57,9 +57,19 @@ export default function TaiwaneseTranslator() {
   const [pronunciationGuide, setPronunciationGuide] = useState('');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [audioError, setAudioError] = useState('');
-  const [activeSection, setActiveSection] = useState('translator'); // 'translator', 'lessons', 'flashcards', 'modules', 'vocabulary', 'phrases'
+  const [activeSection, setActiveSection] = useState('translator'); // 'translator', 'lessons', 'flashcards', 'quiz', 'modules', 'vocabulary', 'phrases'
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [selectedLesson, setSelectedLesson] = useState(null); // null = show units page, lesson ID = show lesson
+
+  // Quiz state
+  const [quizMode, setQuizMode] = useState(null); // null = mode selection, 'translation', 'listening'
+  const [quizQuestions, setQuizQuestions] = useState([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [quizScore, setQuizScore] = useState({ correct: 0, total: 0 });
+  const [selectedAnswer, setSelectedAnswer] = useState(null);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [quizComplete, setQuizComplete] = useState(false);
+
   const audioRef = React.useRef(null);
   const debounceTimerRef = React.useRef(null);
 
@@ -147,8 +157,8 @@ export default function TaiwaneseTranslator() {
     ],
     'Time': [
       { en: 'Today', mandarin: '今天', han: '今仔日', tailo: 'Kin-á-ji̍t' },
-      { en: 'Yesterday', mandarin: '昨天', han: '昨日', tailo: 'Tsa-ji̍t' },
-      { en: 'Tomorrow', mandarin: '明天', han: '明仔日', tailo: 'Bîn-á-ji̍t' },
+      { en: 'Yesterday', mandarin: '昨天', han: '昨昏', tailo: 'Tsa-hng' },
+      { en: 'Tomorrow', mandarin: '明天', han: '明仔載', tailo: 'Bîn-á-tsài' },
       { en: 'Morning', mandarin: '早上', han: '早起', tailo: 'Tsá-khí' },
       { en: 'Afternoon', mandarin: '下午', han: '下晡', tailo: 'Ē-poo' },
       { en: 'Evening', mandarin: '晚上', han: '暗時', tailo: 'Àm-sî' },
@@ -1150,6 +1160,97 @@ export default function TaiwaneseTranslator() {
     }
   };
 
+  // Generate quiz questions from flashcards
+  const generateQuizQuestions = (mode, numQuestions = 10) => {
+    if (flashcards.length < 4) {
+      alert('You need at least 4 flashcards to take a quiz. Add more flashcards first!');
+      return;
+    }
+
+    // Shuffle flashcards and take numQuestions
+    const shuffled = [...flashcards].sort(() => Math.random() - 0.5);
+    const selectedCards = shuffled.slice(0, Math.min(numQuestions, flashcards.length));
+
+    // Generate questions based on mode
+    const questions = selectedCards.map((card, idx) => {
+      // Get 3 wrong answer cards from other flashcards
+      const wrongCards = flashcards
+        .filter(c => c.id !== card.id)
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 3);
+
+      // Combine correct and wrong answers with their romanizations
+      const correctAnswer = mode === 'translation' ? card.back : card.front;
+      const allOptionsWithRomanization = [
+        { text: correctAnswer, romanization: card.tailo },
+        ...wrongCards.map(c => ({
+          text: mode === 'translation' ? c.back : c.front,
+          romanization: c.tailo
+        }))
+      ].sort(() => Math.random() - 0.5); // Shuffle options
+
+      return {
+        id: card.id,
+        question: mode === 'translation' ? card.front : card.back,
+        correctAnswer: correctAnswer,
+        options: allOptionsWithRomanization.map(opt => opt.text),
+        optionsWithRomanization: allOptionsWithRomanization, // Store romanization for each option
+        romanization: card.tailo,
+        mode: mode
+      };
+    });
+
+    setQuizQuestions(questions);
+    setCurrentQuestionIndex(0);
+    setQuizScore({ correct: 0, total: questions.length });
+    setSelectedAnswer(null);
+    setShowFeedback(false);
+    setQuizComplete(false);
+    setQuizMode(mode);
+  };
+
+  // Handle answer selection
+  const handleAnswerSelect = (answer) => {
+    if (showFeedback) return; // Don't allow changing answer after submission
+    setSelectedAnswer(answer);
+  };
+
+  // Submit answer
+  const submitAnswer = () => {
+    if (!selectedAnswer) return;
+
+    const currentQuestion = quizQuestions[currentQuestionIndex];
+    const isCorrect = selectedAnswer === currentQuestion.correctAnswer;
+
+    if (isCorrect) {
+      setQuizScore(prev => ({ ...prev, correct: prev.correct + 1 }));
+    }
+
+    setShowFeedback(true);
+  };
+
+  // Go to next question
+  const nextQuestion = () => {
+    if (currentQuestionIndex < quizQuestions.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
+      setSelectedAnswer(null);
+      setShowFeedback(false);
+    } else {
+      setQuizComplete(true);
+    }
+  };
+
+  // Restart quiz
+  const restartQuiz = () => {
+    setQuizMode(null);
+    setQuizQuestions([]);
+    setCurrentQuestionIndex(0);
+    setQuizScore({ correct: 0, total: 0 });
+    setSelectedAnswer(null);
+    setShowFeedback(false);
+    setQuizComplete(false);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       {/* Shared audio element for all audio playback */}
@@ -1215,6 +1316,21 @@ export default function TaiwaneseTranslator() {
                   {flashcards.length}
                 </span>
               )}
+            </button>
+            <button
+              onClick={() => {
+                setActiveSection('quiz');
+                setQuizMode(null);
+                setQuizComplete(false);
+              }}
+              className={`flex items-center gap-1 md:gap-2 px-2 md:px-4 py-2 md:py-2 rounded-md transition-all ${
+                activeSection === 'quiz'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <Trophy className="w-5 h-5 md:w-4 md:h-4" />
+              <span className="font-medium text-xs md:text-base hidden sm:inline">Quiz</span>
             </button>
 
             {/* More Dropdown Button */}
@@ -2290,6 +2406,259 @@ export default function TaiwaneseTranslator() {
               )}
           </div>
         </div>
+        )}
+
+        {/* Quiz Section */}
+        {activeSection === 'quiz' && (
+          <div className="mt-4 md:mt-6">
+            {!quizMode ? (
+              /* Quiz Mode Selection */
+              <div className="bg-white rounded-lg shadow-xl overflow-hidden">
+                <div className="bg-gradient-to-r from-amber-600 to-orange-600 p-4 md:p-6 text-white">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Trophy className="w-8 h-8 md:w-10 md:h-10" />
+                    <h2 className="text-xl md:text-2xl font-bold">Quiz Time!</h2>
+                  </div>
+                  <p className="text-sm md:text-base text-amber-100">Test your knowledge with interactive quizzes</p>
+                </div>
+
+                <div className="p-4 md:p-6">
+                  {flashcards.length < 4 ? (
+                    <div className="text-center py-8 md:py-12">
+                      <Trophy className="w-12 h-12 md:w-16 md:h-16 mx-auto mb-4 text-gray-300" />
+                      <p className="text-base md:text-lg text-gray-600 mb-2">You need at least 4 flashcards to take a quiz</p>
+                      <p className="text-sm md:text-base text-gray-500">Add more flashcards by saving translations or studying lessons!</p>
+                      <button
+                        onClick={() => setActiveSection('translator')}
+                        className="mt-4 px-4 md:px-6 py-2 md:py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm md:text-base font-medium"
+                      >
+                        Go to Translator
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid sm:grid-cols-2 gap-4 md:gap-6">
+                      {/* Translation Quiz */}
+                      <div className="border-2 border-blue-200 rounded-lg p-4 md:p-6 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
+                        onClick={() => generateQuizQuestions('translation', 10)}
+                      >
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                            <Languages className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
+                          </div>
+                          <h3 className="text-base md:text-lg font-bold text-gray-800">Translation Quiz</h3>
+                        </div>
+                        <p className="text-sm md:text-base text-gray-600 mb-4">
+                          Translate English or Mandarin phrases into Taiwanese
+                        </p>
+                        <div className="flex items-center justify-between text-xs md:text-sm text-gray-500">
+                          <span>📝 Multiple choice</span>
+                          <span>{Math.min(10, flashcards.length)} questions</span>
+                        </div>
+                      </div>
+
+                      {/* Listening Quiz */}
+                      <div className="border-2 border-purple-200 rounded-lg p-4 md:p-6 hover:border-purple-400 hover:shadow-md transition-all cursor-pointer"
+                        onClick={() => generateQuizQuestions('listening', 10)}
+                      >
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-purple-100 flex items-center justify-center">
+                            <Volume2 className="w-5 h-5 md:w-6 md:h-6 text-purple-600" />
+                          </div>
+                          <h3 className="text-base md:text-lg font-bold text-gray-800">Listening Quiz</h3>
+                        </div>
+                        <p className="text-sm md:text-base text-gray-600 mb-4">
+                          Listen to Taiwanese audio and identify the meaning
+                        </p>
+                        <div className="flex items-center justify-between text-xs md:text-sm text-gray-500">
+                          <span>🎧 Audio comprehension</span>
+                          <span>{Math.min(10, flashcards.length)} questions</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : quizComplete ? (
+              /* Quiz Results */
+              <div className="bg-white rounded-lg shadow-xl overflow-hidden">
+                <div className={`p-4 md:p-6 text-white ${quizScore.correct / quizScore.total >= 0.8 ? 'bg-gradient-to-r from-green-600 to-emerald-600' : quizScore.correct / quizScore.total >= 0.6 ? 'bg-gradient-to-r from-blue-600 to-cyan-600' : 'bg-gradient-to-r from-amber-600 to-orange-600'}`}>
+                  <div className="flex items-center gap-3 mb-2">
+                    <Trophy className="w-8 h-8 md:w-10 md:h-10" />
+                    <h2 className="text-xl md:text-2xl font-bold">Quiz Complete!</h2>
+                  </div>
+                  <p className="text-sm md:text-base opacity-90">Here are your results</p>
+                </div>
+
+                <div className="p-6 md:p-8 text-center">
+                  <div className="mb-6 md:mb-8">
+                    <div className="text-4xl md:text-6xl font-bold text-gray-800 mb-2">
+                      {quizScore.correct} / {quizScore.total}
+                    </div>
+                    <div className="text-lg md:text-xl text-gray-600">
+                      {Math.round((quizScore.correct / quizScore.total) * 100)}% Correct
+                    </div>
+                  </div>
+
+                  <div className="mb-6 md:mb-8">
+                    {quizScore.correct / quizScore.total >= 0.8 ? (
+                      <div className="text-base md:text-lg text-green-700">
+                        <CheckCircle className="w-12 h-12 md:w-16 md:h-16 mx-auto mb-2 text-green-600" />
+                        <p className="font-semibold">Excellent work! 🎉</p>
+                        <p className="text-sm md:text-base text-gray-600 mt-1">You're mastering Taiwanese!</p>
+                      </div>
+                    ) : quizScore.correct / quizScore.total >= 0.6 ? (
+                      <div className="text-base md:text-lg text-blue-700">
+                        <CheckCircle className="w-12 h-12 md:w-16 md:h-16 mx-auto mb-2 text-blue-600" />
+                        <p className="font-semibold">Good job! 👍</p>
+                        <p className="text-sm md:text-base text-gray-600 mt-1">Keep practicing to improve</p>
+                      </div>
+                    ) : (
+                      <div className="text-base md:text-lg text-amber-700">
+                        <XCircle className="w-12 h-12 md:w-16 md:h-16 mx-auto mb-2 text-amber-600" />
+                        <p className="font-semibold">Keep trying! 💪</p>
+                        <p className="text-sm md:text-base text-gray-600 mt-1">Review your flashcards and try again</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                    <button
+                      onClick={() => generateQuizQuestions(quizMode, 10)}
+                      className="flex items-center justify-center gap-2 px-4 md:px-6 py-2 md:py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm md:text-base font-medium"
+                    >
+                      <RotateCcw className="w-4 h-4 md:w-5 md:h-5" />
+                      Try Again
+                    </button>
+                    <button
+                      onClick={restartQuiz}
+                      className="px-4 md:px-6 py-2 md:py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm md:text-base font-medium"
+                    >
+                      Back to Menu
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* Quiz Questions */
+              <div className="bg-white rounded-lg shadow-xl overflow-hidden">
+                <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-3 md:p-4 text-white">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Trophy className="w-5 h-5 md:w-6 md:h-6" />
+                      <h2 className="text-base md:text-lg font-bold">
+                        {quizMode === 'translation' ? 'Translation Quiz' : 'Listening Quiz'}
+                      </h2>
+                    </div>
+                    <button
+                      onClick={restartQuiz}
+                      className="text-xs md:text-sm text-white hover:text-indigo-100 transition-colors"
+                    >
+                      Exit Quiz
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between text-xs md:text-sm">
+                    <span>Question {currentQuestionIndex + 1} of {quizQuestions.length}</span>
+                    <span>Score: {quizScore.correct} / {currentQuestionIndex + (showFeedback ? 1 : 0)}</span>
+                  </div>
+                  <div className="mt-2 bg-white bg-opacity-20 rounded-full h-2">
+                    <div
+                      className="bg-white h-2 rounded-full transition-all"
+                      style={{ width: `${((currentQuestionIndex + 1) / quizQuestions.length) * 100}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="p-4 md:p-6">
+                  {quizQuestions[currentQuestionIndex] && (
+                    <>
+                      <div className="mb-6 md:mb-8">
+                        <p className="text-xs md:text-sm text-gray-500 mb-2">
+                          {quizMode === 'translation' ? 'Translate to Taiwanese:' : 'What does this mean?'}
+                        </p>
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1">
+                            <h3 className="text-xl md:text-2xl font-bold text-gray-800">
+                              {quizQuestions[currentQuestionIndex].question}
+                            </h3>
+                          </div>
+                          {quizMode === 'listening' && quizQuestions[currentQuestionIndex].romanization && (
+                            <button
+                              onClick={() => playFlashcardAudio(quizQuestions[currentQuestionIndex].romanization)}
+                              className="p-2 md:p-2.5 bg-indigo-100 hover:bg-indigo-200 rounded-full transition-colors flex-shrink-0"
+                              disabled={isSpeaking}
+                            >
+                              <Volume2 className={`w-5 h-5 md:w-6 md:h-6 text-indigo-600 ${isSpeaking ? 'animate-pulse' : ''}`} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-3 mb-6 md:mb-8">
+                        {quizQuestions[currentQuestionIndex].options.map((option, idx) => {
+                          const isSelected = selectedAnswer === option;
+                          const isCorrect = option === quizQuestions[currentQuestionIndex].correctAnswer;
+                          const showAsCorrect = showFeedback && isCorrect;
+                          const showAsWrong = showFeedback && isSelected && !isCorrect;
+                          const optionWithRomanization = quizQuestions[currentQuestionIndex].optionsWithRomanization?.find(opt => opt.text === option);
+
+                          return (
+                            <button
+                              key={idx}
+                              onClick={() => handleAnswerSelect(option)}
+                              disabled={showFeedback}
+                              className={`w-full text-left p-3 md:p-4 rounded-lg border-2 transition-all text-sm md:text-base ${
+                                showAsCorrect
+                                  ? 'border-green-500 bg-green-50 text-green-800'
+                                  : showAsWrong
+                                  ? 'border-red-500 bg-red-50 text-red-800'
+                                  : isSelected
+                                  ? 'border-indigo-500 bg-indigo-50 text-indigo-800'
+                                  : 'border-gray-300 hover:border-indigo-300 hover:bg-gray-50'
+                              } ${showFeedback ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <div>{option}</div>
+                                  {optionWithRomanization?.romanization && (
+                                    <div className={`text-xs md:text-sm mt-1 font-mono ${
+                                      showAsCorrect ? 'text-green-600' : showAsWrong ? 'text-red-600' : 'text-gray-500'
+                                    }`}>
+                                      {optionWithRomanization.romanization}
+                                    </div>
+                                  )}
+                                </div>
+                                {showAsCorrect && <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 ml-2" />}
+                                {showAsWrong && <XCircle className="w-5 h-5 text-red-600 flex-shrink-0 ml-2" />}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        {!showFeedback ? (
+                          <button
+                            onClick={submitAnswer}
+                            disabled={!selectedAnswer}
+                            className="w-full sm:flex-1 px-4 md:px-6 py-2 md:py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm md:text-base font-medium"
+                          >
+                            Submit Answer
+                          </button>
+                        ) : (
+                          <button
+                            onClick={nextQuestion}
+                            className="w-full sm:flex-1 px-4 md:px-6 py-2 md:py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm md:text-base font-medium"
+                          >
+                            {currentQuestionIndex < quizQuestions.length - 1 ? 'Next Question →' : 'See Results'}
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Lessons Section */}

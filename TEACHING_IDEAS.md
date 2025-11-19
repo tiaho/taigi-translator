@@ -268,7 +268,13 @@ This document contains ideas for educational features to add to the Taiwanese tr
 - ✅ Flashcard undo functionality (DONE) - Last 10 deletions can be restored
 - ✅ Flashcard audio playback during review (DONE)
 - ✅ Batch add flashcards from learning modules (DONE)
-- [ ] Quiz modes (translation, listening)
+- ✅ Quiz modes (translation, listening) (DONE)
+  - Translation quiz: English → choose correct Taiwanese (multiple choice)
+  - Listening quiz: Taiwanese → choose correct meaning
+  - Tâi-lô romanization displayed on answer options (not question) for learning support
+  - Audio playback for listening mode
+  - Score tracking and results summary
+  - Generated from flashcard collection
 - [ ] Progress tracking and statistics dashboard
 - [ ] Daily challenge system
 
@@ -390,6 +396,10 @@ Before implementing, consider asking potential users:
 - ✅ Automatic number conversion (Arabic → Chinese → Tâi-lô)
 - ✅ Manual dictionary override system
 - ✅ Flashcard system with SRS algorithm (4 difficulty levels)
+- ✅ Quiz system with translation and listening modes
+  - Tâi-lô romanization on answer options for learning support
+  - Audio playback in listening mode
+  - Score tracking and results
 - ✅ Learning modules with real-time streaming generation (AI-powered)
 - ✅ Interactive Lesson Viewer with 15-unit curriculum
   - 6-section tabbed navigation
@@ -406,7 +416,7 @@ Before implementing, consider asking potential users:
 
 **Next Priorities:**
 - [ ] Progress tracking and statistics dashboard
-- [ ] Quiz modes (translation, listening comprehension)
 - [ ] Vocabulary Difference Trainer (unique to this app!)
 - [ ] Tone Sandhi Trainer (fills major gap in Taiwanese resources)
 - [ ] Daily challenge system
+- [ ] Export/import flashcards functionality

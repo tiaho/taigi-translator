@@ -30,6 +30,12 @@ A React-based web application for romanizing Taiwanese text, featuring Tâi-lô 
   - Track learning progress (learning → known → mastered)
   - Audio playback during review
   - Undo deleted flashcards
+- 🎯 **Quiz System**: Test your knowledge with interactive quizzes
+  - Translation quiz: English → choose correct Taiwanese
+  - Listening quiz: Taiwanese → choose correct meaning
+  - Tâi-lô romanization on answer options for learning support
+  - Audio playback in listening mode
+  - Score tracking and detailed results
 - 📖 **Learning Modules**: Interactive contextual dialogues
   - Real-world scenarios (At the Bus Stop, At the Doctor, etc.)
   - Side-by-side Mandarin and Taiwanese
@@ -172,9 +178,19 @@ npm run preview
 3. **Study modes**:
    - Review: Show cards due for review based on SRS algorithm
    - View All: Browse entire flashcard collection
+   - Quiz: Test yourself with translation or listening quizzes
 4. **Rate your knowledge**: Click "Again", "Hard", "Good", or "Easy"
 5. **Track progress**: See learning status for each card
 6. **Audio support**: Play audio during review
+
+### Quiz System
+
+1. **Access quizzes** via the "Flashcards" section (requires 4+ flashcards)
+2. **Choose quiz mode**:
+   - Translation: Read English → select correct Taiwanese
+   - Listening: Hear Taiwanese → select correct English meaning
+3. **Study while testing**: Tâi-lô romanization shown on answer options
+4. **Review results**: See your score and retake to improve
 
 ### Learning Modules
 
