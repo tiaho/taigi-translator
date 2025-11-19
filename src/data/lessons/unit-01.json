@@ -1,0 +1,638 @@
+{
+  "id": "unit-01",
+  "title": "Greetings and Basic Politeness",
+  "level": "beginner",
+  "duration": "3-4 lessons",
+  "goal": "Learn essential greetings and polite expressions for daily interactions",
+
+  "objectives": [
+    "Greet people appropriately at different times of day",
+    "Introduce yourself (name, nationality)",
+    "Use basic politeness expressions (thank you, excuse me, sorry)",
+    "Understand when to use Taiwanese vs. Mandarin in social contexts",
+    "Master essential question particles",
+    "Practice natural conversation flow"
+  ],
+
+  "vocabulary": [
+    {
+      "taiwanese": "你好",
+      "romanization": "lí-hó",
+      "mandarin": "你好",
+      "pinyin": "nǐ hǎo",
+      "english": "Hello",
+      "notes": "Most common general greeting",
+      "audio": true
+    },
+    {
+      "taiwanese": "𠢕早",
+      "romanization": "gâu-tsá",
+      "mandarin": "早安",
+      "pinyin": "zǎo ān",
+      "english": "Good morning",
+      "notes": "Used until around 11 AM",
+      "audio": true
+    },
+    {
+      "taiwanese": "午安",
+      "romanization": "gōo-an",
+      "mandarin": "午安",
+      "pinyin": "wǔ ān",
+      "english": "Good afternoon",
+      "notes": "Less commonly used than morning/evening greetings",
+      "audio": true
+    },
+    {
+      "taiwanese": "暗安",
+      "romanization": "àm-an",
+      "mandarin": "晚安",
+      "pinyin": "wǎn ān",
+      "english": "Good evening/night",
+      "notes": "Used for both greeting and goodbye at night",
+      "audio": true
+    },
+    {
+      "taiwanese": "食飽未",
+      "romanization": "Tsia̍h-pá-buē?",
+      "mandarin": "吃飽了沒",
+      "pinyin": "chī bǎo le méi",
+      "english": "Have you eaten? (greeting)",
+      "notes": "Traditional greeting, not literal question",
+      "audio": true
+    },
+    {
+      "taiwanese": "久見",
+      "romanization": "kiú-kiàn",
+      "mandarin": "好久不見",
+      "pinyin": "hǎo jiǔ bù jiàn",
+      "english": "Long time no see",
+      "audio": true
+    },
+    {
+      "taiwanese": "多謝",
+      "romanization": "to-siā",
+      "mandarin": "謝謝",
+      "pinyin": "xiè xiè",
+      "english": "Thank you",
+      "notes": "Most common way to say thanks",
+      "audio": true
+    },
+    {
+      "taiwanese": "感謝",
+      "romanization": "kám-siā",
+      "mandarin": "感謝",
+      "pinyin": "gǎn xiè",
+      "english": "Thank you (formal)",
+      "notes": "More formal than 多謝",
+      "audio": true
+    },
+    {
+      "taiwanese": "失禮",
+      "romanization": "sit-lé",
+      "mandarin": "不好意思",
+      "pinyin": "bù hǎo yì sī",
+      "english": "Excuse me",
+      "notes": "To get someone's attention politely",
+      "audio": true
+    },
+    {
+      "taiwanese": "歹勢",
+      "romanization": "pháinn-sè",
+      "mandarin": "對不起",
+      "pinyin": "duì bù qǐ",
+      "english": "Sorry",
+      "notes": "For apologizing",
+      "audio": true
+    },
+    {
+      "taiwanese": "無要緊",
+      "romanization": "bô-iàu-kín",
+      "mandarin": "沒關係",
+      "pinyin": "méi guān xì",
+      "english": "No problem / It's okay",
+      "audio": true
+    },
+    {
+      "taiwanese": "請",
+      "romanization": "tshiánn",
+      "mandarin": "請",
+      "pinyin": "qǐng",
+      "english": "Please",
+      "audio": true
+    },
+    {
+      "taiwanese": "我的名是...",
+      "romanization": "guá ê miâ sī...",
+      "mandarin": "我叫...",
+      "pinyin": "wǒ jiào...",
+      "english": "My name is...",
+      "audio": true
+    },
+    {
+      "taiwanese": "你叫啥物名？",
+      "romanization": "Lí kiò siánn-mi̍h miâ?",
+      "mandarin": "你叫什麼名字？",
+      "pinyin": "nǐ jiào shén me míng zi?",
+      "english": "What's your name?",
+      "audio": true
+    },
+    {
+      "taiwanese": "你是佗位人?",
+      "romanization": "Lí sī tó-uī-lâng?",
+      "mandarin": "你是哪裡人?",
+      "pinyin": "nǐ shì nǎ lǐ rén?",
+      "english": "Where are you from?",
+      "audio": true
+    },
+    {
+      "taiwanese": "台灣人",
+      "romanization": "Tâi-uân-lâng",
+      "mandarin": "台灣人",
+      "pinyin": "Tái wān rén",
+      "english": "Taiwanese person",
+      "audio": true
+    },
+    {
+      "taiwanese": "美國人",
+      "romanization": "Bí-kok-lâng",
+      "mandarin": "美國人",
+      "pinyin": "měi guó rén",
+      "english": "American",
+      "audio": true
+    },
+    {
+      "taiwanese": "日本人",
+      "romanization": "Ji̍t-pún-lâng",
+      "mandarin": "日本人",
+      "pinyin": "rì běn rén",
+      "english": "Japanese",
+      "audio": true
+    },
+    {
+      "taiwanese": "歡迎",
+      "romanization": "huan-gîng",
+      "mandarin": "歡迎",
+      "pinyin": "huān yíng",
+      "english": "Welcome",
+      "audio": true
+    },
+    {
+      "taiwanese": "再會",
+      "romanization": "tsài-huē",
+      "mandarin": "再見",
+      "pinyin": "zài jiàn",
+      "english": "Goodbye",
+      "audio": true
+    },
+    {
+      "taiwanese": "慢行",
+      "romanization": "bān-kiânn",
+      "mandarin": "慢走",
+      "pinyin": "màn zǒu",
+      "english": "Take care / Go slowly",
+      "notes": "Polite way to say goodbye",
+      "audio": true
+    },
+    {
+      "taiwanese": "保重",
+      "romanization": "pó-tiōng",
+      "mandarin": "保重",
+      "pinyin": "bǎo zhòng",
+      "english": "Take care of yourself",
+      "audio": true
+    }
+  ],
+
+  "grammar": [
+    {
+      "title": "是 (sī) structure - Identity and Classification",
+      "explanation": "是 (sī) is used to state identity, occupation, or classification. It's equivalent to 'to be' in English when linking a subject to a noun.",
+      "pattern": "Subject + 是 + Noun/Identity",
+      "examples": [
+        {
+          "taiwanese": "我是台灣人",
+          "romanization": "Guá sī Tâi-uân-lâng",
+          "english": "I am Taiwanese",
+          "breakdown": "我 (I) + 是 (am) + 台灣人 (Taiwanese)"
+        },
+        {
+          "taiwanese": "你是美國人",
+          "romanization": "Lí sī Bí-kok-lâng",
+          "english": "You are American"
+        },
+        {
+          "taiwanese": "伊是老師",
+          "romanization": "I sī lāu-su",
+          "english": "He/She is a teacher"
+        }
+      ],
+      "practice": [
+        {
+          "prompt": "I am a student",
+          "answer": "我是學生",
+          "romanization": "Guá sī ha̍k-sing"
+        }
+      ]
+    },
+    {
+      "title": "的 (ê) possessive particle",
+      "explanation": "的 (ê) shows possession or relationship between nouns. It's similar to 's or 'of' in English.",
+      "pattern": "Possessor + 的 + Possessed",
+      "examples": [
+        {
+          "taiwanese": "我的名",
+          "romanization": "guá ê miâ",
+          "english": "my name"
+        },
+        {
+          "taiwanese": "你的厝",
+          "romanization": "lí ê tshù",
+          "english": "your home"
+        },
+        {
+          "taiwanese": "台灣的食物",
+          "romanization": "Tâi-uân ê tsia̍h-mi̍h",
+          "english": "Taiwan's food"
+        }
+      ],
+      "notes": "的 (ê) can sometimes be omitted in casual speech, especially with close relationships (e.g., 我媽 instead of 我的媽 for 'my mom')."
+    },
+    {
+      "title": "未 (buē/bē) question particle - Yes/No Questions",
+      "explanation": "未 (buē/bē) is placed at the end of statements to form yes/no questions. It's similar to adding '...yet?' or '...or not?' in English.",
+      "pattern": "Statement + 未?",
+      "examples": [
+        {
+          "taiwanese": "食飽未？",
+          "romanization": "Tsia̍h-pá-buē?",
+          "english": "Have you eaten (yet)?"
+        },
+        {
+          "taiwanese": "來未？",
+          "romanization": "Lâi--buē?",
+          "english": "Has (he/she) come yet?"
+        },
+        {
+          "taiwanese": "準備好未？",
+          "romanization": "Tsún-pī hó--buē?",
+          "english": "Ready yet?"
+        }
+      ]
+    },
+    {
+      "title": "呢 (neh) - 'And you?' / 'What about...?'",
+      "explanation": "呢 (neh) is used to return a question or ask about someone/something else. It's like saying 'and you?' or 'what about...?'",
+      "examples": [
+        {
+          "taiwanese": "你呢？",
+          "romanization": "Lí--neh?",
+          "english": "And you? / What about you?"
+        },
+        {
+          "taiwanese": "阿明呢？",
+          "romanization": "A-bîng--neh?",
+          "english": "What about A-Ming?"
+        }
+      ]
+    },
+    {
+      "title": "嘛 (mā) - 'Also' / 'Too'",
+      "explanation": "嘛 (mā) means 'also' or 'too'. It's placed after the subject or before the verb.",
+      "examples": [
+        {
+          "taiwanese": "我嘛是台灣人",
+          "romanization": "Guá mā sī Tâi-uân-lâng",
+          "english": "I am also Taiwanese"
+        },
+        {
+          "taiwanese": "我嘛食飽矣",
+          "romanization": "Guá mā tsia̍h-pá--ah",
+          "english": "I've eaten too"
+        }
+      ]
+    }
+  ],
+
+  "culturalNotes": [
+    {
+      "title": "Traditional Greeting - 食飽未?",
+      "content": "\"食飽未?\" (Have you eaten?) is a traditional greeting that reflects Taiwan's agricultural past when food security was a real concern. Today, it's used to show care and concern, not as a literal question. The appropriate response is simply \"食飽矣\" (I've eaten) even if you haven't!"
+    },
+    {
+      "title": "When to Use Taiwanese",
+      "content": "Taiwanese is commonly used among older generations, in traditional markets, temples, and in southern Taiwan (especially Tainan and Kaohsiung). Using Taiwanese shows respect and cultural connection. Many younger Taiwanese are learning it to connect with their heritage."
+    },
+    {
+      "title": "Code-Switching is Natural",
+      "content": "Don't worry about mixing Taiwanese and Mandarin - it's very common and completely natural! Many Taiwanese people seamlessly switch between languages within a single conversation. This is called 'code-switching' and is a normal part of bilingual communication."
+    },
+    {
+      "title": "Politeness Levels",
+      "content": "Taiwanese has different levels of politeness, though not as formal as some languages. Adding 請 (tshiánn - please) before requests and using 您 (lín) instead of 你 (lí) for 'you' shows extra respect to elders or superiors."
+    },
+    {
+      "title": "Name Customs",
+      "content": "In Taiwanese culture, it's common to use 阿 (A-) before someone's given name as a friendly, informal way to address them (like A-Ming 阿明). This is more casual than using full names but warmer than surnames."
+    }
+  ],
+
+  "dialogues": [
+    {
+      "title": "Meeting a Neighbor",
+      "scenario": "You meet your elderly neighbor in the morning",
+      "lines": [
+        {
+          "speaker": "You",
+          "taiwanese": "𠢕早！食飽未？",
+          "romanization": "Gâu-tsá! Tsia̍h-pá-buē?",
+          "english": "Good morning! Have you eaten?",
+          "audio": true
+        },
+        {
+          "speaker": "Neighbor",
+          "taiwanese": "食飽矣，多謝。你呢？",
+          "romanization": "Tsia̍h-pá--ah, to-siā. Lí--neh?",
+          "english": "I've eaten, thanks. And you?",
+          "audio": true
+        },
+        {
+          "speaker": "You",
+          "taiwanese": "我嘛食飽矣。",
+          "romanization": "Guá mā tsia̍h-pá--ah.",
+          "english": "I've eaten too.",
+          "audio": true
+        },
+        {
+          "speaker": "Neighbor",
+          "taiwanese": "好，慢行。",
+          "romanization": "Hó, bān-kiânn.",
+          "english": "Good, take care.",
+          "audio": true
+        }
+      ]
+    },
+    {
+      "title": "Introducing Yourself",
+      "scenario": "You're meeting someone for the first time at a community event",
+      "lines": [
+        {
+          "speaker": "Person A",
+          "taiwanese": "你好，我的名是阿明。你叫啥物名？",
+          "romanization": "Lí-hó, guá ê miâ sī A-bîng. Lí kiò siánn-mi̍h miâ?",
+          "english": "Hello, my name is A-Ming. What's your name?",
+          "audio": true
+        },
+        {
+          "speaker": "You",
+          "taiwanese": "你好，我的名是小美。",
+          "romanization": "Lí-hó, guá ê miâ sī Sió-bí.",
+          "english": "Hello, my name is Xiao-Mei.",
+          "audio": true
+        },
+        {
+          "speaker": "Person A",
+          "taiwanese": "歡迎！你是佗位人？",
+          "romanization": "Huan-gîng! Lí sī tó-uī-lâng?",
+          "english": "Welcome! Where are you from?",
+          "audio": true
+        },
+        {
+          "speaker": "You",
+          "taiwanese": "我是台灣人，台北人。你呢？",
+          "romanization": "Guá sī Tâi-uân-lâng, Tâi-pak-lâng. Lí--neh?",
+          "english": "I'm Taiwanese, from Taipei. And you?",
+          "audio": true
+        },
+        {
+          "speaker": "Person A",
+          "taiwanese": "我嘛是台灣人，台南人。",
+          "romanization": "Guá mā sī Tâi-uân-lâng, Tâi-lâm-lâng.",
+          "english": "I'm also Taiwanese, from Tainan.",
+          "audio": true
+        }
+      ]
+    },
+    {
+      "title": "Bumping into Someone",
+      "scenario": "You accidentally bump into someone at the market",
+      "lines": [
+        {
+          "speaker": "You",
+          "taiwanese": "歹勢！失禮！",
+          "romanization": "Pháinn-sè! Sit-lé!",
+          "english": "Sorry! Excuse me!",
+          "audio": true
+        },
+        {
+          "speaker": "Person",
+          "taiwanese": "無要緊，無要緊。",
+          "romanization": "Bô-iàu-kín, bô-iàu-kín.",
+          "english": "No problem, no problem.",
+          "audio": true
+        }
+      ]
+    },
+    {
+      "title": "Saying Goodbye",
+      "scenario": "You're leaving a friend's house after visiting",
+      "lines": [
+        {
+          "speaker": "You",
+          "taiwanese": "多謝你的招待。我愛走矣。",
+          "romanization": "To-siā lí ê tsiau-thāi. Guá ài tsáu--ah.",
+          "english": "Thank you for your hospitality. I have to go now.",
+          "audio": true
+        },
+        {
+          "speaker": "Friend",
+          "taiwanese": "無要緊。慢行，保重。",
+          "romanization": "Bô-iàu-kín. Bān-kiânn, pó-tiōng.",
+          "english": "No problem. Take care, look after yourself.",
+          "audio": true
+        },
+        {
+          "speaker": "You",
+          "taiwanese": "再會！",
+          "romanization": "Tsài-huē!",
+          "english": "Goodbye!",
+          "audio": true
+        }
+      ]
+    }
+  ],
+
+  "exercises": [
+    {
+      "type": "matching",
+      "title": "Match Taiwanese Greetings",
+      "instructions": "Match the Taiwanese phrases with their English meanings",
+      "items": [
+        { "taiwanese": "你好", "romanization": "lí-hó", "answer": "Hello" },
+        { "taiwanese": "𠢕早", "romanization": "gâu-tsá", "answer": "Good morning" },
+        { "taiwanese": "多謝", "romanization": "to-siā", "answer": "Thank you" },
+        { "taiwanese": "歹勢", "romanization": "pháinn-sè", "answer": "Sorry" },
+        { "taiwanese": "再會", "romanization": "tsài-huē", "answer": "Goodbye" },
+        { "taiwanese": "失禮", "romanization": "sit-lé", "answer": "Excuse me" },
+        { "taiwanese": "無要緊", "romanization": "bô-iàu-kín", "answer": "No problem" },
+        { "taiwanese": "暗安", "romanization": "àm-an", "answer": "Good evening/night" }
+      ]
+    },
+    {
+      "type": "fill-in-blank",
+      "title": "Complete the Conversations",
+      "instructions": "Fill in the missing Taiwanese words",
+      "items": [
+        {
+          "prompt": "A: 你好，____？ (Hello, have you eaten?)",
+          "answer": "食飽未",
+          "romanization": "Tsia̍h-pá-buē",
+          "hint": "Traditional greeting about eating"
+        },
+        {
+          "prompt": "B: 食飽矣，____。(I've eaten, thank you.)",
+          "answer": "多謝",
+          "romanization": "to-siā",
+          "hint": "How do you say 'thank you'?"
+        },
+        {
+          "prompt": "A: 我的名____ 阿明。(My name is A-Ming.)",
+          "answer": "是",
+          "romanization": "sī",
+          "hint": "Verb meaning 'to be'"
+        },
+        {
+          "prompt": "B: 你叫啥物名？(What's your name?) A: 我____ 名是小美。",
+          "answer": "的",
+          "romanization": "ê",
+          "hint": "Possessive particle"
+        },
+        {
+          "prompt": "A: 你是台灣人。(You are Taiwanese.) B: 我____ 是台灣人。(I am also Taiwanese.)",
+          "answer": "嘛",
+          "romanization": "mā",
+          "hint": "Means 'also' or 'too'"
+        }
+      ]
+    },
+    {
+      "type": "multiple-choice",
+      "title": "Choose the Correct Response",
+      "instructions": "Select the most appropriate Taiwanese response",
+      "items": [
+        {
+          "question": "Someone says 'Lí-hó' to you. How do you respond?",
+          "options": [
+            { "text": "你好 (Lí-hó)", "correct": true },
+            { "text": "再會 (Tsài-huē)", "correct": false },
+            { "text": "歹勢 (Pháinn-sè)", "correct": false }
+          ],
+          "explanation": "你好 (Lí-hó) is the appropriate greeting response. 再會 means goodbye, and 歹勢 means sorry."
+        },
+        {
+          "question": "You accidentally bump into someone. What should you say?",
+          "options": [
+            { "text": "多謝 (To-siā)", "correct": false },
+            { "text": "歹勢 (Pháinn-sè)", "correct": true },
+            { "text": "久見 (Kiú-kiàn)", "correct": false }
+          ],
+          "explanation": "歹勢 (Pháinn-sè) means 'sorry' and is used for apologizing."
+        },
+        {
+          "question": "It's 7:00 AM and you meet your neighbor. What greeting is most appropriate?",
+          "options": [
+            { "text": "暗安 (Àm-an)", "correct": false },
+            { "text": "𠢕早 (Gâu-tsá)", "correct": true },
+            { "text": "再會 (Tsài-huē)", "correct": false }
+          ],
+          "explanation": "𠢕早 (Gâu-tsá) means 'good morning' and is used in the morning hours."
+        }
+      ]
+    },
+    {
+      "type": "translation",
+      "title": "Translate to Taiwanese",
+      "instructions": "Translate these English sentences to Taiwanese",
+      "items": [
+        {
+          "english": "My name is John.",
+          "answer": "我的名是John。",
+          "romanization": "Guá ê miâ sī John.",
+          "alternates": ["我的名是約翰。"]
+        },
+        {
+          "english": "I am American.",
+          "answer": "我是美國人。",
+          "romanization": "Guá sī Bí-kok-lâng."
+        },
+        {
+          "english": "Thank you. No problem.",
+          "answer": "多謝。無要緊。",
+          "romanization": "To-siā. Bô-iàu-kín."
+        }
+      ]
+    },
+    {
+      "type": "role-play",
+      "title": "Role-Play Scenarios",
+      "instructions": "Practice these conversation scenarios",
+      "items": [
+        {
+          "scenario": "You meet your elderly neighbor in the morning",
+          "yourRole": "Resident",
+          "partnerRole": "Elderly Neighbor",
+          "steps": [
+            "Greet them appropriately for the time of day",
+            "Ask if they've eaten (traditional greeting)",
+            "Respond to their questions",
+            "Say a polite goodbye"
+          ]
+        },
+        {
+          "scenario": "You're at a community event and want to introduce yourself",
+          "yourRole": "New Member",
+          "partnerRole": "Community Member",
+          "steps": [
+            "Greet them and introduce yourself",
+            "Ask for their name",
+            "Tell them where you're from",
+            "Ask where they're from"
+          ]
+        }
+      ]
+    }
+  ],
+
+  "practiceActivities": [
+    {
+      "title": "Flashcard Review",
+      "description": "Create flashcards for all 22 vocabulary words. Review them daily, focusing on pronunciation and tone.",
+      "goal": "Memorize essential vocabulary"
+    },
+    {
+      "title": "Daily Greeting Journal",
+      "description": "Practice greetings every day this week. Write down or record yourself greeting family members or friends in Taiwanese.",
+      "goal": "Build confidence in using basic greetings naturally"
+    },
+    {
+      "title": "Introduce Yourself Video",
+      "description": "Record a 30-second video introducing yourself in Taiwanese. Include your name, where you're from, and a greeting.",
+      "goal": "Practice self-introduction and pronunciation"
+    },
+    {
+      "title": "Real-World Practice",
+      "description": "Try using Taiwanese greetings with Taiwanese speakers in your community, at markets, or with family members.",
+      "goal": "Build real-world communication confidence"
+    }
+  ],
+
+  "reviewChecklist": [
+    "I can greet people appropriately at different times of day",
+    "I can introduce myself with my name and nationality",
+    "I can use basic politeness expressions (thank you, excuse me, sorry)",
+    "I understand the cultural context of '食飽未?' as a greeting",
+    "I can form simple sentences using 是 (sī)",
+    "I can use 的 (ê) to show possession",
+    "I can form yes/no questions with 未 (buē)",
+    "I can respond naturally to basic greetings"
+  ]
+}

@@ -55,6 +55,11 @@ TaigiApp/
 │   ├── main.jsx              # React entry point
 │   ├── App.jsx               # Root app component
 │   ├── taiwanese-translator.jsx # Main translator component
+│   ├── components/           # React components
+│   │   └── LessonViewer.jsx  # Interactive lesson viewer with tabs, exercises, checklists
+│   ├── data/                 # Frontend data files
+│   │   └── lessons/          # Lesson JSON files
+│   │       └── unit-01.json  # Unit 1: Greetings and Basic Politeness
 │   └── index.css             # Tailwind CSS imports
 ├── backend/                  # Python Flask backend
 │   ├── app.py                # Flask API server with MOE dict, TauPhahJi, Claude API, Supabase
@@ -65,7 +70,11 @@ TaigiApp/
 │       ├── rank_dictionary_entries.py  # Score & rank dictionary words
 │       ├── setup_supabase.py          # Initialize Supabase database & storage
 │       ├── generate_audio_supabase.py # Pre-generate audio to Supabase
-│       └── test_supabase_audio.py     # Test Supabase audio cache
+│       ├── test_supabase_audio.py     # Test Supabase audio cache
+│       ├── cache_lesson_audio.py      # Pre-cache audio for a specific lesson
+│       ├── validate_lesson_plan.py    # Validate vocabulary in LESSON_PLAN.md
+│       ├── validate_and_fix_lesson_plan.py  # Validate and auto-fix romanization
+│       └── apply_fixes.py             # Apply romanization fixes
 ├── venv/                     # Python virtual environment (not in git)
 ├── dist/                     # Production build output (not in git)
 ├── node_modules/             # Node.js dependencies (not in git)
@@ -191,8 +200,21 @@ Preview the production build locally.
     - Server-Sent Events (SSE) for streaming generation
     - Batch add all vocabulary to flashcards
     - Audio playback for each dialogue line
-15. **Common Phrases**: 11 pre-loaded phrases with instant audio playback
-16. **Clean UI**: No external popups or links - all functionality embedded in the app
+15. **Interactive Lesson Viewer**: Structured 15-unit curriculum with interactive features
+    - **Tabbed Navigation**: 6 sections (Overview, Vocabulary, Grammar, Dialogues, Culture, Exercises)
+    - **Interactive Review Checklist**: Click to check off learning objectives (persists in localStorage per lesson)
+    - **Interactive Exercises**:
+      - Drag-and-drop matching: Taiwanese phrases on left, draggable English answers on right with sticky positioning
+      - Multiple-choice: Clickable options with instant correct/incorrect feedback and explanations
+      - Fill-in-blank: Reveal answer functionality
+      - Translation: English to Taiwanese practice
+      - Role-play: Guided conversation scenarios
+    - **Create Flashcards**: One-click generation of flashcards from all exercise items (integrated in Vocabulary tab and Practice Activities)
+    - **Practice Activities**: 4 guided learning tasks (Flashcard Review, Daily Journal, Video Practice, Real-World Practice)
+    - **Audio Pre-caching**: Server-side pre-caching of all lesson audio for instant playback
+    - **Component**: `src/components/LessonViewer.jsx` - Loads lesson data from `src/data/lessons/*.json`
+16. **Common Phrases**: 11 pre-loaded phrases with instant audio playback
+17. **Clean UI**: No external popups or links - all functionality embedded in the app
 
 ## Architecture
 
@@ -203,6 +225,31 @@ Preview the production build locally.
 - Fetches audio from backend `/api/audio` proxy (avoids CORS issues)
 - Timeout handling for slow audio generation (10-20 seconds first time)
 - Includes 11 common phrases with pre-defined Tai-lo romanization
+
+### Frontend (`src/components/LessonViewer.jsx`)
+- Interactive lesson viewer component for structured learning
+- Loads lesson data from JSON files in `src/data/lessons/*.json`
+- **Tabbed Navigation**: 6 sections (Overview, Vocabulary, Grammar, Dialogues, Culture, Exercises)
+- **State Management**:
+  - `lessonData`: Loaded from JSON file
+  - `currentSection`: Active tab
+  - `audioCache`: In-memory audio URL cache
+  - `playingAudio`: Currently playing audio romanization
+  - `revealedAnswers`: Fill-in-blank answers revealed by user
+  - `selectedAnswers`: Multiple-choice selections
+  - `matchingAnswers`: Drag-and-drop matching pairs
+  - `draggedItem`: Currently dragged item in matching exercises
+  - `checkedItems`: Review checklist completion (persisted to localStorage)
+- **Interactive Features**:
+  - **Review Checklist**: Click checkboxes to track progress, saved per lesson in localStorage
+  - **Drag-and-Drop Matching**: HTML5 drag API with sticky answer bank (top: 140px to account for header)
+  - **Multiple-Choice**: Instant feedback with green (correct) / red (incorrect) visual indicators
+  - **Audio Playback**: Click volume icons to play Taiwanese pronunciation
+  - **Flashcard Creation**: Generate flashcards from vocabulary and all exercise items
+- **Audio Pre-caching**: Calls `/api/lessons/{lessonId}/cache-audio` on mount to pre-generate all lesson audio
+- **localStorage Keys**:
+  - `lesson-{lessonId}-checklist`: Review checklist completion state
+  - `flashcards`: Shared flashcard collection across all lessons
 
 ### Backend (`backend/app.py`)
 - Flask REST API server with CORS enabled
@@ -495,6 +542,152 @@ def stream_learning_module():
 ```
 
 This creates a smooth user experience where content appears progressively as it's generated, rather than waiting for the entire module to complete.
+
+### Lesson Data Structure
+
+Lessons are stored as JSON files in `src/data/lessons/` and follow this structure:
+
+```json
+{
+  "id": "unit-01",
+  "title": "Greetings and Basic Politeness",
+  "level": "beginner",
+  "duration": "3-4 lessons",
+  "goal": "Learn essential greetings and polite expressions",
+
+  "objectives": ["Greet people appropriately", "Introduce yourself", ...],
+  "reviewChecklist": ["I can greet people", "I can introduce myself", ...],
+
+  "vocabulary": [
+    {
+      "taiwanese": "你好",
+      "romanization": "lí-hó",
+      "mandarin": "你好",
+      "pinyin": "nǐ hǎo",
+      "english": "Hello",
+      "notes": "Most common general greeting",
+      "audio": true
+    }
+  ],
+
+  "grammar": [
+    {
+      "title": "是 (sī) structure",
+      "explanation": "是 (sī) is used to state identity...",
+      "pattern": "Subject + 是 + Noun/Identity",
+      "examples": [
+        {
+          "taiwanese": "我是台灣人",
+          "romanization": "Guá sī Tâi-uân-lâng",
+          "english": "I am Taiwanese",
+          "breakdown": "我 (I) + 是 (am) + 台灣人 (Taiwanese)"
+        }
+      ],
+      "notes": "Optional additional notes"
+    }
+  ],
+
+  "dialogues": [
+    {
+      "title": "Meeting a Neighbor",
+      "scenario": "You meet your elderly neighbor in the morning",
+      "lines": [
+        {
+          "speaker": "You",
+          "taiwanese": "𠢕早！",
+          "romanization": "Gâu-tsá!",
+          "english": "Good morning!",
+          "audio": true
+        }
+      ]
+    }
+  ],
+
+  "culturalNotes": [
+    {
+      "title": "Traditional Greeting - 食飽未?",
+      "content": "\"食飽未?\" is a traditional greeting that reflects..."
+    }
+  ],
+
+  "exercises": [
+    {
+      "type": "matching",
+      "title": "Match Taiwanese Greetings",
+      "instructions": "Match the Taiwanese phrases with their English meanings",
+      "items": [
+        {
+          "taiwanese": "你好",
+          "romanization": "lí-hó",
+          "answer": "Hello"
+        }
+      ]
+    },
+    {
+      "type": "fill-in-blank",
+      "items": [
+        {
+          "prompt": "A: 你好，____？",
+          "answer": "食飽未",
+          "romanization": "Tsia̍h-pá-buē",
+          "hint": "Traditional greeting about eating"
+        }
+      ]
+    },
+    {
+      "type": "multiple-choice",
+      "items": [
+        {
+          "question": "Someone says 'Lí-hó' to you. How do you respond?",
+          "options": [
+            { "text": "你好 (Lí-hó)", "correct": true },
+            { "text": "再會 (Tsài-huē)", "correct": false }
+          ],
+          "explanation": "你好 is the appropriate greeting response"
+        }
+      ]
+    },
+    {
+      "type": "translation",
+      "items": [
+        {
+          "english": "My name is John.",
+          "answer": "我的名是John。",
+          "romanization": "Guá ê miâ sī John."
+        }
+      ]
+    },
+    {
+      "type": "role-play",
+      "items": [
+        {
+          "scenario": "You meet your elderly neighbor in the morning",
+          "yourRole": "Resident",
+          "partnerRole": "Elderly Neighbor",
+          "steps": ["Greet them appropriately", "Ask if they've eaten", ...]
+        }
+      ]
+    }
+  ],
+
+  "practiceActivities": [
+    {
+      "title": "Flashcard Review",
+      "description": "Create flashcards for all 22 vocabulary words",
+      "goal": "Memorize essential vocabulary"
+    }
+  ]
+}
+```
+
+**Exercise Types Supported**:
+- `matching`: Drag-and-drop matching with sticky answer bank
+- `fill-in-blank`: Show/reveal answer functionality
+- `multiple-choice`: Clickable options with instant feedback
+- `translation`: English to Taiwanese translation practice
+- `role-play`: Guided conversation scenarios
+
+**Note**: Pronunciation and listening exercise types were removed as they were counterproductive (showing answers defeats the purpose). Audio playback is integrated throughout vocabulary, dialogues, and other sections instead.
 
 ## Production Deployment
 

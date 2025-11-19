@@ -1,0 +1,254 @@
+================================================================================
+REAL MISMATCHES FOUND
+================================================================================
+
+### Unit 1: Greetings and Basic Politeness
+Line 41: 食飽未 - Have you eaten? (greeting)
+  Current: tsia̍h-pá-buē
+  Correct: Tsia̍h-pá bē
+
+### Unit 1: Greetings and Basic Politeness
+Line 46: 佗位人 - Where are you from?
+  Current: tó-uī-lâng
+  Correct: Tó-uī lâng
+
+### Unit 2: Numbers and Counting
+Line 94: 零 - 0
+  Current: lîng
+  Correct: lân
+
+### Unit 2: Numbers and Counting
+Line 96: 二/兩 - 2
+  Current: nn̄g
+  Correct: jī
+
+### Unit 2: Numbers and Counting
+Line 97: 三 - 3
+  Current: sann
+  Correct: sam
+
+### Unit 2: Numbers and Counting
+Line 102: 八 - 8
+  Current: peh/pueh
+  Correct: pat
+
+### Unit 2: Numbers and Counting
+Line 106: 千 - 1,000
+  Current: tshing
+  Correct: tshian
+
+### Unit 2: Numbers and Counting
+Line 109: 偌濟 - How much?
+  Current: jua̍h-tsē/guā-tsē
+  Correct: guā-tsē
+
+### Unit 4: Food and Eating
+Line 219: 魚 - Fish
+  Current: hî/hû
+  Correct: hî
+
+### Unit 4: Food and Eating
+Line 220: 蛋 - Egg
+  Current: nn̄g
+  Correct: tàn
+
+### Unit 4: Food and Eating
+Line 224: 夭壽好食 - Extremely delicious
+  Current: iau-siū-hó-tsia̍h
+  Correct: Iáu-siū hó-tsia̍h
+
+### Unit 4: Food and Eating
+Line 229: 辣 - Spicy
+  Current: lo̍ah
+  Correct: lua̍h
+
+### Unit 5: Shopping and Money
+Line 287: 買 - Buy
+  Current: bé/bué
+  Correct: bé
+
+### Unit 5: Shopping and Money
+Line 288: 賣 - Sell
+  Current: bē/buē
+  Correct: bē
+
+### Unit 5: Shopping and Money
+Line 297: 找 - Give change
+  Current: tshuē
+  Correct: tsāu
+
+### Unit 6: Daily Routines and Time
+Line 371: 昨日 - Yesterday
+  Current: tsa-ji̍t
+  Correct: tso̍h--ji̍t
+
+### Unit 6: Daily Routines and Time
+Line 372: 這禮拜 - This week
+  Current: tsit-lé-pài
+  Correct: Tsit lé-pài
+
+### Unit 6: Daily Routines and Time
+Line 380: 規日 - All day
+  Current: kui-ji̍t
+  Correct: tsi̍t-ji̍t-kàu-àm
+
+### Unit 7: Places and Directions
+Line 433: 醫院 - Hospital
+  Current: i-īnn
+  Correct: pēnn-īnn
+
+### Unit 7: Places and Directions
+Line 440: 教堂 - Church
+  Current: kàu-tn̂g
+  Correct: lé-pài-tn̂g
+
+### Unit 7: Places and Directions
+Line 455: 近 - Near
+  Current: kīn/kūn
+  Correct: kīn
+
+### Unit 7: Places and Directions
+Line 457: 真近 - Very close
+  Current: tsin-kīn
+  Correct: tsin kūn
+
+### Unit 8: Transportation
+Line 504: 火車 - Train
+  Current: hué-tshia / hé-tshia
+  Correct: hué-tshia
+
+### Unit 8: Transportation
+Line 507: 飛行機 - Airplane
+  Current: hui-hîng-ki
+  Correct: hue-lîng-ki
+
+### Unit 8: Transportation
+Line 523: 幾號 - What number
+  Current: kuí-hō
+  Correct: Kuí hō
+
+### Unit 9: Weather and Seasons
+Line 568: 月 - Moon
+  Current: gue̍h/ge̍h
+  Correct: gua̍t
+
+### Unit 9: Weather and Seasons
+Line 575: 爍爁 - Lightning
+  Current: sih-nà
+  Correct: sih-nah
+
+### Unit 10: Health and Body
+Line 642: 面 - Face
+  Current: bīn
+  Correct: biān
+
+### Unit 10: Health and Body
+Line 654: 病 - Sick, illness
+  Current: pēnn/pīnn
+  Correct: pēnn
+
+### Unit 10: Health and Body
+Line 655: 痛 - Pain, hurt
+  Current: thiànn
+  Correct: thàng
+
+### Unit 10: Health and Body
+Line 656: 頭殼痛 - Headache
+  Current: thâu-khak-thiànn
+  Correct: thâu-khak thàng
+
+### Unit 10: Health and Body
+Line 657: 腹肚痛 - Stomachache
+  Current: pak-tóo-thiànn
+  Correct: Pak-tóo thàng
+
+### Unit 10: Health and Body
+Line 661: 喉嚨痛 - Sore throat
+  Current: âu-nâ-thiànn
+  Correct: âu nâ thàng
+
+### Unit 11: Hobbies and Interests
+Line 726: 行山 - Hiking
+  Current: kiânn-suann
+  Correct: thàm-bōng-tshù
+
+### Unit 11: Hobbies and Interests
+Line 736: 學 - Learn
+  Current: o̍h
+  Correct: ha̍k
+
+### Unit 12: Work and School
+Line 783: 工程師 - Engineer
+  Current: kang-thîng-su
+  Correct: kang-tîng-su
+
+### Unit 12: Work and School
+Line 789: 國小 - Elementary school
+  Current: kok-sió
+  Correct: Kok-sió
+
+### Unit 12: Work and School
+Line 798: 薪水 - Salary
+  Current: sin-tsuí
+  Correct: sin-suí
+
+### Unit 12: Work and School
+Line 801: 開會 - Have a meeting
+  Current: khai-huē
+  Correct: khui-huē
+
+### Unit 13: Culture and Festivals
+Line 840: 元宵節 - Lantern Festival
+  Current: guân-siau-tseh
+  Correct: Siōng-guân
+
+### Unit 13: Culture and Festivals
+Line 841: 清明節 - Tomb-Sweeping Day
+  Current: tshing-bîng-tseh
+  Correct: Tshing-bîng-tseh
+
+### Unit 13: Culture and Festivals
+Line 842: 端午節 - Dragon Boat Festival
+  Current: tuan-ngóo-tseh
+  Correct: Gōo-ji̍t-tseh
+
+### Unit 13: Culture and Festivals
+Line 843: 中秋節 - Mid-Autumn Festival
+  Current: tiong-tshiu-tseh
+  Correct: Tiong-tshiu-tseh
+
+### Unit 13: Culture and Festivals
+Line 847: 粽仔 - Rice dumpling (zongzi)
+  Current: tsàng-á
+  Correct: tsàng ah
+
+### Unit 13: Culture and Festivals
+Line 850: 鞭炮 - Firecrackers
+  Current: pian-phàu
+  Correct: phàu-á
+
+### Unit 13: Culture and Festivals
+Line 855: 傳統 - Tradition
+  Current: thuân-thóng
+  Correct: Thuân-thóng
+
+### Unit 14: Emotions and Feelings
+Line 901: 快樂 - Happy
+  Current: khuài-lo̍k
+  Correct: khuìnn-ua̍h
+
+### Unit 14: Emotions and Feelings
+Line 909: 緊張 - Nervous
+  Current: kín-tiuⁿ
+  Correct: kín-tiunn
+
+### Unit 14: Emotions and Feelings
+Line 915: 無好 - Not good
+  Current: bô-hó
+  Correct: Bô hó
+
+### Unit 15: Travel and Tourism
+Line 957: 風景 - Scenery
+  Current: hong-kíng
+  Correct: kíng-sik
+

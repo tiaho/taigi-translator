@@ -36,6 +36,14 @@ A React-based web application for romanizing Taiwanese text, featuring Tâi-lô 
   - Full romanization with audio
   - Vocabulary lists with explanations
   - AI-generated streaming content
+- 📚 **Interactive Lesson Viewer**: Structured 15-unit curriculum
+  - 6-section tabbed navigation (Overview, Vocabulary, Grammar, Dialogues, Culture, Exercises)
+  - Interactive review checklists (progress tracking)
+  - Drag-and-drop matching exercises
+  - Multiple-choice with instant feedback
+  - Fill-in-blank, translation, and role-play activities
+  - One-click flashcard generation from lessons
+  - Pre-cached audio for instant playback
 
 ### User Experience
 - 🌐 **Clean, Modern UI**: Built with Tailwind CSS
@@ -167,6 +175,26 @@ npm run preview
    - Play audio for each line
 4. **Review vocabulary**: Study key words and phrases
 5. **Save to flashcards**: Add vocabulary directly to your deck
+
+### Interactive Lessons
+
+1. **Access lessons** via "Lessons" in the navigation
+2. **Choose a unit**: 15 units from beginner to advanced
+3. **Navigate sections** using tabs:
+   - **Overview**: Learning objectives and review checklist
+   - **Vocabulary**: Core words with audio and flashcard creation
+   - **Grammar**: Rules, patterns, and examples
+   - **Dialogues**: Realistic conversations with audio
+   - **Culture**: Cultural insights and traditions
+   - **Exercises**: Interactive practice activities
+4. **Complete exercises**:
+   - Drag-and-drop matching
+   - Multiple-choice questions with feedback
+   - Fill-in-blank with hints
+   - Translation practice
+   - Role-play scenarios
+5. **Track progress**: Check off learning objectives in the review checklist
+6. **Create flashcards**: Generate flashcards from lesson content with one click
 
 ### Common Phrases
 
