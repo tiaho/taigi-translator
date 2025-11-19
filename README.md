@@ -36,6 +36,13 @@ A React-based web application for romanizing Taiwanese text, featuring Tâi-lô 
   - Tâi-lô romanization on answer options for learning support
   - Audio playback in listening mode
   - Score tracking and detailed results
+- 📊 **Statistics Dashboard**: Track your learning progress
+  - Study streak tracking (current and longest streak)
+  - Flashcard performance (status distribution, review ratings)
+  - Quiz analytics (overall accuracy, mode comparison, recent history)
+  - Achievements and milestones (6 goals with progress bars)
+  - Visual charts and progress indicators
+  - Automatic tracking of all learning activities
 - 📖 **Learning Modules**: Interactive contextual dialogues
   - Real-world scenarios (At the Bus Stop, At the Doctor, etc.)
   - Side-by-side Mandarin and Taiwanese
@@ -191,6 +198,25 @@ npm run preview
    - Listening: Hear Taiwanese → select correct English meaning
 3. **Study while testing**: Tâi-lô romanization shown on answer options
 4. **Review results**: See your score and retake to improve
+
+### Statistics Dashboard
+
+1. **Access dashboard** by clicking "Stats" in the main navigation
+2. **View key metrics**:
+   - Study streak (current and longest)
+   - Total flashcards and reviews
+   - Quiz average score
+   - Total study sessions
+3. **Track flashcard performance**:
+   - Status distribution (learning/known/mastered)
+   - Review rating breakdown (Again/Hard/Good/Easy)
+4. **Analyze quiz results**:
+   - Overall accuracy and mode comparison
+   - Recent quiz history with detailed scores
+5. **Monitor achievements**:
+   - 6 milestones with progress bars
+   - Unlock achievements by reaching goals
+6. **All progress automatically tracked** - just study and watch your stats grow!
 
 ### Learning Modules
 

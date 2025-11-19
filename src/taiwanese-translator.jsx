@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeftRight, Volume2, BookOpen, Loader2, Languages, Library, Home, CreditCard, GraduationCap, BookMarked, MessageSquare, ChevronDown, MoreHorizontal, Trophy, CheckCircle, XCircle, RotateCcw } from 'lucide-react';
+import { ArrowLeftRight, Volume2, BookOpen, Loader2, Languages, Library, Home, CreditCard, GraduationCap, BookMarked, MessageSquare, ChevronDown, MoreHorizontal, Trophy, CheckCircle, XCircle, RotateCcw, BarChart3, TrendingUp, Flame, Calendar, Award, Target } from 'lucide-react';
 import LessonViewer from './components/LessonViewer';
 
 export default function TaiwaneseTranslator() {
@@ -70,6 +70,54 @@ export default function TaiwaneseTranslator() {
   const [showFeedback, setShowFeedback] = useState(false);
   const [quizComplete, setQuizComplete] = useState(false);
 
+  // Statistics state
+  const [statistics, setStatistics] = useState(() => {
+    try {
+      const saved = localStorage.getItem('statistics');
+      return saved ? JSON.parse(saved) : {
+        quizzes: {
+          totalQuizzes: 0,
+          totalQuestions: 0,
+          totalCorrect: 0,
+          byMode: {
+            translation: { total: 0, correct: 0, quizzes: 0 },
+            listening: { total: 0, correct: 0, quizzes: 0 }
+          },
+          history: [] // { date, mode, score, total, percentage }
+        },
+        flashcards: {
+          totalReviews: 0,
+          reviewHistory: [], // { date, cardId, rating }
+          byRating: {
+            again: 0,
+            hard: 0,
+            good: 0,
+            easy: 0
+          }
+        },
+        studySessions: {
+          lastStudyDate: null,
+          currentStreak: 0,
+          longestStreak: 0,
+          totalSessions: 0,
+          sessionHistory: [] // { date, duration, cardsReviewed, quizzesTaken }
+        },
+        overall: {
+          firstUsedDate: new Date().toISOString(),
+          totalTimeStudied: 0 // in minutes
+        }
+      };
+    } catch (e) {
+      console.error('Error loading statistics:', e);
+      return {
+        quizzes: { totalQuizzes: 0, totalQuestions: 0, totalCorrect: 0, byMode: { translation: { total: 0, correct: 0, quizzes: 0 }, listening: { total: 0, correct: 0, quizzes: 0 } }, history: [] },
+        flashcards: { totalReviews: 0, reviewHistory: [], byRating: { again: 0, hard: 0, good: 0, easy: 0 } },
+        studySessions: { lastStudyDate: null, currentStreak: 0, longestStreak: 0, totalSessions: 0, sessionHistory: [] },
+        overall: { firstUsedDate: new Date().toISOString(), totalTimeStudied: 0 }
+      };
+    }
+  });
+
   const audioRef = React.useRef(null);
   const debounceTimerRef = React.useRef(null);
 
@@ -98,6 +146,109 @@ export default function TaiwaneseTranslator() {
     } catch (e) {
       console.error('Cache write error:', e);
     }
+  };
+
+  // Statistics helper functions
+  const saveStatistics = (stats) => {
+    try {
+      localStorage.setItem('statistics', JSON.stringify(stats));
+    } catch (e) {
+      console.error('Error saving statistics:', e);
+    }
+  };
+
+  const recordQuizCompletion = (mode, score, total) => {
+    const newStats = { ...statistics };
+    const percentage = Math.round((score / total) * 100);
+    const today = new Date().toISOString().split('T')[0];
+
+    // Update quiz statistics
+    newStats.quizzes.totalQuizzes += 1;
+    newStats.quizzes.totalQuestions += total;
+    newStats.quizzes.totalCorrect += score;
+    newStats.quizzes.byMode[mode].quizzes += 1;
+    newStats.quizzes.byMode[mode].total += total;
+    newStats.quizzes.byMode[mode].correct += score;
+    newStats.quizzes.history.unshift({
+      date: new Date().toISOString(),
+      mode,
+      score,
+      total,
+      percentage
+    });
+
+    // Keep only last 50 quiz results
+    if (newStats.quizzes.history.length > 50) {
+      newStats.quizzes.history = newStats.quizzes.history.slice(0, 50);
+    }
+
+    // Update study streak
+    updateStudyStreak(newStats, today);
+
+    setStatistics(newStats);
+    saveStatistics(newStats);
+  };
+
+  const recordFlashcardReview = (cardId, rating) => {
+    const newStats = { ...statistics };
+    const today = new Date().toISOString().split('T')[0];
+
+    // Update flashcard statistics
+    newStats.flashcards.totalReviews += 1;
+    newStats.flashcards.byRating[rating] += 1;
+    newStats.flashcards.reviewHistory.unshift({
+      date: new Date().toISOString(),
+      cardId,
+      rating
+    });
+
+    // Keep only last 100 reviews
+    if (newStats.flashcards.reviewHistory.length > 100) {
+      newStats.flashcards.reviewHistory = newStats.flashcards.reviewHistory.slice(0, 100);
+    }
+
+    // Update study streak
+    updateStudyStreak(newStats, today);
+
+    setStatistics(newStats);
+    saveStatistics(newStats);
+  };
+
+  const updateStudyStreak = (stats, today) => {
+    const lastStudy = stats.studySessions.lastStudyDate;
+
+    if (lastStudy === today) {
+      // Already studied today, no change to streak
+      return;
+    }
+
+    if (!lastStudy) {
+      // First study session ever
+      stats.studySessions.currentStreak = 1;
+      stats.studySessions.longestStreak = 1;
+      stats.studySessions.lastStudyDate = today;
+      stats.studySessions.totalSessions = 1;
+      return;
+    }
+
+    const lastDate = new Date(lastStudy);
+    const todayDate = new Date(today);
+    const diffTime = Math.abs(todayDate - lastDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 1) {
+      // Consecutive day - increment streak
+      stats.studySessions.currentStreak += 1;
+      if (stats.studySessions.currentStreak > stats.studySessions.longestStreak) {
+        stats.studySessions.longestStreak = stats.studySessions.currentStreak;
+      }
+    } else if (diffDays > 1) {
+      // Streak broken - reset to 1
+      stats.studySessions.currentStreak = 1;
+    }
+
+    stats.studySessions.lastStudyDate = today;
+    stats.studySessions.totalSessions += 1;
   };
 
   const commonPhrases = [
@@ -162,7 +313,6 @@ export default function TaiwaneseTranslator() {
       { en: 'Morning', mandarin: '早上', han: '早起', tailo: 'Tsá-khí' },
       { en: 'Afternoon', mandarin: '下午', han: '下晡', tailo: 'Ē-poo' },
       { en: 'Evening', mandarin: '晚上', han: '暗時', tailo: 'Àm-sî' },
-      { en: 'Night', mandarin: '夜晚', han: '暗頓', tailo: 'Àm-tǹg' },
     ],
     'Common Verbs': [
       { en: 'Eat', mandarin: '吃', han: '食', tailo: 'Tsia̍h' },
@@ -856,29 +1006,18 @@ export default function TaiwaneseTranslator() {
     let newStatus = card.status;
 
     // SRS Algorithm (simplified SM-2)
-    if (difficulty === 'hard') {
-      newInterval = Math.max(1, Math.floor(newInterval * 0.5)); // Reduce interval
+    if (difficulty === 'again') {
+      newInterval = 1; // Reset to 1 day
+      newStatus = 'learning';
+    } else if (difficulty === 'hard') {
+      newInterval = 3; // 3 days
       newStatus = 'learning';
     } else if (difficulty === 'good') {
-      if (newInterval === 0) {
-        newInterval = 1; // First review: 1 day
-      } else if (newInterval === 1) {
-        newInterval = 3; // Second review: 3 days
-      } else {
-        newInterval = Math.floor(newInterval * 2); // Double the interval
-      }
-
-      if (newInterval >= 7) newStatus = 'known';
-      if (newInterval >= 21) newStatus = 'mastered';
+      newInterval = 7; // 7 days
+      newStatus = 'known';
     } else if (difficulty === 'easy') {
-      if (newInterval === 0) {
-        newInterval = 4; // Skip ahead
-      } else {
-        newInterval = Math.floor(newInterval * 2.5);
-      }
-
-      if (newInterval >= 7) newStatus = 'known';
-      if (newInterval >= 21) newStatus = 'mastered';
+      newInterval = 14; // 14 days
+      newStatus = 'mastered';
     }
 
     // Calculate next review date
@@ -906,6 +1045,9 @@ export default function TaiwaneseTranslator() {
     } catch (e) {
       console.error('Error saving review:', e);
     }
+
+    // Record review statistics
+    recordFlashcardReview(card.id, difficulty);
 
     // Move to next card
     nextCard();
@@ -1236,6 +1378,8 @@ export default function TaiwaneseTranslator() {
       setSelectedAnswer(null);
       setShowFeedback(false);
     } else {
+      // Record quiz completion statistics
+      recordQuizCompletion(quizMode, quizScore.correct, quizScore.total);
       setQuizComplete(true);
     }
   };
@@ -1331,6 +1475,17 @@ export default function TaiwaneseTranslator() {
             >
               <Trophy className="w-5 h-5 md:w-4 md:h-4" />
               <span className="font-medium text-xs md:text-base hidden sm:inline">Quiz</span>
+            </button>
+            <button
+              onClick={() => setActiveSection('statistics')}
+              className={`flex items-center gap-1 md:gap-2 px-2 md:px-4 py-2 md:py-2 rounded-md transition-all ${
+                activeSection === 'statistics'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <BarChart3 className="w-5 h-5 md:w-4 md:h-4" />
+              <span className="font-medium text-xs md:text-base hidden sm:inline">Stats</span>
             </button>
 
             {/* More Dropdown Button */}
@@ -2059,27 +2214,34 @@ export default function TaiwaneseTranslator() {
                   {isCardFlipped && (
                     <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200">
                       <p className="text-xs text-gray-600 mb-2 text-center">How well did you know this?</p>
-                      <div className="flex gap-2">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <button
+                          onClick={() => reviewCard('again')}
+                          className="py-2 px-3 bg-gray-600 text-white rounded-lg font-medium text-sm hover:bg-gray-700 transition-colors"
+                        >
+                          😞 Again
+                          <span className="block text-xs opacity-75">1 day</span>
+                        </button>
                         <button
                           onClick={() => reviewCard('hard')}
-                          className="flex-1 py-2 px-3 bg-red-500 text-white rounded-lg font-medium text-sm hover:bg-red-600 transition-colors"
+                          className="py-2 px-3 bg-orange-500 text-white rounded-lg font-medium text-sm hover:bg-orange-600 transition-colors"
                         >
                           😓 Hard
-                          <span className="block text-xs opacity-75">Review soon</span>
+                          <span className="block text-xs opacity-75">3 days</span>
                         </button>
                         <button
                           onClick={() => reviewCard('good')}
-                          className="flex-1 py-2 px-3 bg-blue-500 text-white rounded-lg font-medium text-sm hover:bg-blue-600 transition-colors"
+                          className="py-2 px-3 bg-blue-500 text-white rounded-lg font-medium text-sm hover:bg-blue-600 transition-colors"
                         >
                           😊 Good
-                          <span className="block text-xs opacity-75">Standard</span>
+                          <span className="block text-xs opacity-75">7 days</span>
                         </button>
                         <button
                           onClick={() => reviewCard('easy')}
-                          className="flex-1 py-2 px-3 bg-green-500 text-white rounded-lg font-medium text-sm hover:bg-green-600 transition-colors"
+                          className="py-2 px-3 bg-green-500 text-white rounded-lg font-medium text-sm hover:bg-green-600 transition-colors"
                         >
                           😄 Easy
-                          <span className="block text-xs opacity-75">Review later</span>
+                          <span className="block text-xs opacity-75">14 days</span>
                         </button>
                       </div>
                     </div>
@@ -2658,6 +2820,296 @@ export default function TaiwaneseTranslator() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Statistics Dashboard Section */}
+        {activeSection === 'statistics' && (
+          <div className="mt-4 md:mt-6 space-y-4 md:space-y-6">
+            {/* Header */}
+            <div className="bg-white rounded-lg shadow-xl overflow-hidden">
+              <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-4 md:p-6 text-white">
+                <div className="flex items-center gap-3 mb-2">
+                  <BarChart3 className="w-8 h-8 md:w-10 md:h-10" />
+                  <h2 className="text-xl md:text-2xl font-bold">Learning Statistics</h2>
+                </div>
+                <p className="text-sm md:text-base text-purple-100">Track your progress and achievements</p>
+              </div>
+
+              {/* Key Metrics */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 p-4 md:p-6">
+                {/* Study Streak */}
+                <div className="bg-gradient-to-br from-orange-50 to-red-50 p-3 md:p-4 rounded-lg border border-orange-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <Flame className="w-6 h-6 md:w-8 md:h-8 text-orange-600" />
+                    <span className="text-xs md:text-sm text-gray-600">Day Streak</span>
+                  </div>
+                  <div className="text-2xl md:text-3xl font-bold text-orange-700">
+                    {statistics.studySessions.currentStreak}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    Best: {statistics.studySessions.longestStreak} days
+                  </div>
+                </div>
+
+                {/* Total Flashcards */}
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-3 md:p-4 rounded-lg border border-blue-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <CreditCard className="w-6 h-6 md:w-8 md:h-8 text-blue-600" />
+                    <span className="text-xs md:text-sm text-gray-600">Flashcards</span>
+                  </div>
+                  <div className="text-2xl md:text-3xl font-bold text-blue-700">
+                    {flashcards.length}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {statistics.flashcards.totalReviews} reviews
+                  </div>
+                </div>
+
+                {/* Quiz Score */}
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-3 md:p-4 rounded-lg border border-green-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <Trophy className="w-6 h-6 md:w-8 md:h-8 text-green-600" />
+                    <span className="text-xs md:text-sm text-gray-600">Quiz Avg</span>
+                  </div>
+                  <div className="text-2xl md:text-3xl font-bold text-green-700">
+                    {statistics.quizzes.totalQuestions > 0
+                      ? Math.round((statistics.quizzes.totalCorrect / statistics.quizzes.totalQuestions) * 100)
+                      : 0}%
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {statistics.quizzes.totalQuizzes} quizzes
+                  </div>
+                </div>
+
+                {/* Total Study Sessions */}
+                <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-3 md:p-4 rounded-lg border border-purple-200">
+                  <div className="flex items-center justify-between mb-2">
+                    <Calendar className="w-6 h-6 md:w-8 md:h-8 text-purple-600" />
+                    <span className="text-xs md:text-sm text-gray-600">Sessions</span>
+                  </div>
+                  <div className="text-2xl md:text-3xl font-bold text-purple-700">
+                    {statistics.studySessions.totalSessions}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    Total study days
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Flashcard Performance */}
+            <div className="bg-white rounded-lg shadow-xl p-4 md:p-6">
+              <h3 className="text-lg md:text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <CreditCard className="w-5 h-5 md:w-6 md:h-6 text-indigo-600" />
+                Flashcard Performance
+              </h3>
+
+              {/* Flashcard Status Distribution */}
+              <div className="mb-6">
+                <p className="text-sm md:text-base text-gray-600 mb-3">Cards by Status</p>
+                <div className="space-y-2">
+                  {['learning', 'known', 'mastered'].map(status => {
+                    const count = flashcards.filter(c => c.status === status).length;
+                    const percentage = flashcards.length > 0 ? (count / flashcards.length) * 100 : 0;
+                    const colors = {
+                      learning: 'bg-orange-500',
+                      known: 'bg-blue-500',
+                      mastered: 'bg-green-500'
+                    };
+                    return (
+                      <div key={status}>
+                        <div className="flex items-center justify-between text-xs md:text-sm mb-1">
+                          <span className="capitalize text-gray-700">{status}</span>
+                          <span className="font-medium text-gray-900">{count} ({percentage.toFixed(0)}%)</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className={`${colors[status]} h-2 rounded-full transition-all`}
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Review Rating Distribution */}
+              <div>
+                <p className="text-sm md:text-base text-gray-600 mb-3">Review Performance</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-3">
+                  {[
+                    { rating: 'again', label: 'Again', color: 'bg-gray-100 text-gray-700', emoji: '😞' },
+                    { rating: 'hard', label: 'Hard', color: 'bg-orange-100 text-orange-700', emoji: '😓' },
+                    { rating: 'good', label: 'Good', color: 'bg-blue-100 text-blue-700', emoji: '😊' },
+                    { rating: 'easy', label: 'Easy', color: 'bg-green-100 text-green-700', emoji: '😄' }
+                  ].map(({ rating, label, color, emoji }) => (
+                    <div key={rating} className={`${color} p-3 rounded-lg text-center`}>
+                      <div className="text-xl md:text-2xl mb-1">{emoji}</div>
+                      <div className="font-bold text-lg md:text-xl">
+                        {statistics.flashcards.byRating[rating] || 0}
+                      </div>
+                      <div className="text-xs opacity-75">{label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Quiz Performance */}
+            <div className="bg-white rounded-lg shadow-xl p-4 md:p-6">
+              <h3 className="text-lg md:text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <Trophy className="w-5 h-5 md:w-6 md:h-6 text-indigo-600" />
+                Quiz Performance
+              </h3>
+
+              {statistics.quizzes.totalQuizzes === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Trophy className="w-12 h-12 md:w-16 md:h-16 mx-auto mb-3 opacity-30" />
+                  <p className="text-sm md:text-base">No quizzes taken yet. Take your first quiz to see statistics!</p>
+                </div>
+              ) : (
+                <>
+                  {/* Quiz Mode Comparison */}
+                  <div className="grid sm:grid-cols-2 gap-4 mb-6">
+                    {Object.entries(statistics.quizzes.byMode).map(([mode, data]) => {
+                      const accuracy = data.total > 0 ? Math.round((data.correct / data.total) * 100) : 0;
+                      return (
+                        <div key={mode} className="bg-gradient-to-br from-indigo-50 to-purple-50 p-4 rounded-lg border border-indigo-200">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm md:text-base font-medium text-gray-700 capitalize">{mode}</span>
+                            {mode === 'translation' ? <Languages className="w-5 h-5 text-indigo-600" /> : <Volume2 className="w-5 h-5 text-purple-600" />}
+                          </div>
+                          <div className="text-2xl md:text-3xl font-bold text-indigo-700 mb-1">{accuracy}%</div>
+                          <div className="text-xs text-gray-600">
+                            {data.correct}/{data.total} correct • {data.quizzes} quizzes
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Recent Quiz History */}
+                  <div>
+                    <p className="text-sm md:text-base text-gray-600 mb-3">Recent Quizzes</p>
+                    <div className="space-y-2 max-h-64 overflow-y-auto">
+                      {statistics.quizzes.history.slice(0, 10).map((quiz, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-2 md:p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                          <div className="flex items-center gap-2 md:gap-3 flex-1">
+                            {quiz.mode === 'translation' ? (
+                              <Languages className="w-4 h-4 md:w-5 md:h-5 text-indigo-600 flex-shrink-0" />
+                            ) : (
+                              <Volume2 className="w-4 h-4 md:w-5 md:h-5 text-purple-600 flex-shrink-0" />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="text-xs md:text-sm font-medium text-gray-700 capitalize truncate">{quiz.mode} Quiz</div>
+                              <div className="text-xs text-gray-500">{new Date(quiz.date).toLocaleDateString()}</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+                            <span className="text-xs md:text-sm text-gray-600">{quiz.score}/{quiz.total}</span>
+                            <span className={`text-sm md:text-base font-bold ${
+                              quiz.percentage >= 80 ? 'text-green-600' : quiz.percentage >= 60 ? 'text-blue-600' : 'text-orange-600'
+                            }`}>
+                              {quiz.percentage}%
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Achievements & Milestones */}
+            <div className="bg-white rounded-lg shadow-xl p-4 md:p-6">
+              <h3 className="text-lg md:text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <Award className="w-5 h-5 md:w-6 md:h-6 text-indigo-600" />
+                Achievements & Milestones
+              </h3>
+
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                {[
+                  {
+                    achieved: flashcards.length >= 10,
+                    title: 'First 10 Cards',
+                    description: 'Create 10 flashcards',
+                    icon: '🎯',
+                    progress: Math.min(flashcards.length, 10),
+                    total: 10
+                  },
+                  {
+                    achieved: flashcards.length >= 50,
+                    title: 'Card Collector',
+                    description: 'Create 50 flashcards',
+                    icon: '📚',
+                    progress: Math.min(flashcards.length, 50),
+                    total: 50
+                  },
+                  {
+                    achieved: statistics.studySessions.currentStreak >= 7,
+                    title: 'Week Warrior',
+                    description: '7-day study streak',
+                    icon: '🔥',
+                    progress: Math.min(statistics.studySessions.currentStreak, 7),
+                    total: 7
+                  },
+                  {
+                    achieved: statistics.quizzes.totalQuizzes >= 10,
+                    title: 'Quiz Master',
+                    description: 'Complete 10 quizzes',
+                    icon: '🏆',
+                    progress: Math.min(statistics.quizzes.totalQuizzes, 10),
+                    total: 10
+                  },
+                  {
+                    achieved: statistics.flashcards.totalReviews >= 100,
+                    title: 'Dedicated Learner',
+                    description: '100 card reviews',
+                    icon: '⭐',
+                    progress: Math.min(statistics.flashcards.totalReviews, 100),
+                    total: 100
+                  },
+                  {
+                    achieved: flashcards.filter(c => c.status === 'mastered').length >= 20,
+                    title: 'Master Scholar',
+                    description: '20 mastered cards',
+                    icon: '👑',
+                    progress: Math.min(flashcards.filter(c => c.status === 'mastered').length, 20),
+                    total: 20
+                  }
+                ].map((achievement, idx) => (
+                  <div
+                    key={idx}
+                    className={`p-3 md:p-4 rounded-lg border-2 ${
+                      achievement.achieved
+                        ? 'bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-400'
+                        : 'bg-gray-50 border-gray-200 opacity-60'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="text-2xl md:text-3xl">{achievement.icon}</div>
+                      {achievement.achieved && (
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                      )}
+                    </div>
+                    <div className="font-bold text-sm md:text-base text-gray-800 mb-1">{achievement.title}</div>
+                    <div className="text-xs text-gray-600 mb-2">{achievement.description}</div>
+                    <div className="w-full bg-gray-200 rounded-full h-1.5">
+                      <div
+                        className="bg-gradient-to-r from-indigo-500 to-purple-500 h-1.5 rounded-full transition-all"
+                        style={{ width: `${(achievement.progress / achievement.total) * 100}%` }}
+                      />
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1 text-right">
+                      {achievement.progress}/{achievement.total}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
