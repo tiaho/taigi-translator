@@ -288,6 +288,26 @@ This document contains ideas for educational features to add to the Taiwanese tr
   - Server-Sent Events (SSE) for real-time generation
   - Audio playback for each dialogue line
   - Batch add all vocabulary to flashcards
+- ✅ Interactive Lesson Viewer (DONE)
+  - Structured 15-unit curriculum (Unit 1: Greetings and Basic Politeness complete)
+  - 6-section tabbed navigation (Overview, Vocabulary, Grammar, Dialogues, Culture, Exercises)
+  - Interactive review checklists with localStorage progress tracking
+  - Interactive exercises:
+    - Drag-and-drop matching (Taiwanese phrases → English answers with sticky positioning)
+    - Multiple-choice with instant correct/incorrect feedback and explanations
+    - Fill-in-blank with reveal answer functionality
+    - Translation practice (English → Taiwanese)
+    - Role-play scenarios (guided conversation practice)
+  - One-click flashcard generation from all lesson vocabulary and exercises
+  - Pre-cached audio for instant playback (36 phrases from Unit 1 cached to Supabase)
+  - Units page with organized lesson selection and unit structure
+  - "Back to Units" navigation for easy lesson browsing
+- ✅ Supabase integration for audio caching (DONE)
+  - 3-tier caching system: In-memory → Supabase cloud → Hapsing API
+  - Persistent cloud storage for audio files (CDN delivery)
+  - Database metadata tracking (tailo_text, storage_path, file_size, tier)
+  - Pre-generation scripts for lesson audio caching
+  - 100% success rate for Unit 1 (36/36 phrases cached)
 - ✅ AI-powered heteronym disambiguation (DONE)
   - Context-based pronunciation selection (e.g., 看 → khuànn vs khàn)
   - Uses Claude API with minimal token cost (10 tokens max per word)
@@ -304,10 +324,20 @@ This document contains ideas for educational features to add to the Taiwanese tr
 - [ ] Word association game
 
 ### Phase 5: Polish & Scale (Week 9+)
+- ✅ Mobile responsiveness (DONE)
+  - Icon-only navigation on mobile (text labels hidden with `hidden sm:inline`)
+  - Touch-friendly button targets (44px+ heights for better mobile UX)
+  - Responsive text scaling (`text-2xl md:text-4xl` pattern throughout)
+  - Adaptive layouts (stacked on mobile, side-by-side on desktop)
+  - Scrollable tabs with hidden scrollbars (`overflow-x-auto scrollbar-hide`)
+  - Optimized spacing and padding for different screen sizes
+  - Responsive grids (vertical dividers on mobile, horizontal on desktop)
+  - Custom CSS utilities (`.scrollbar-hide` for cleaner mobile experience)
+  - Tailwind breakpoints (`sm:` 640px, `md:` 768px) used throughout
 - [ ] Backend database (optional)
 - [ ] User authentication (optional)
 - [ ] Cross-device sync
-- [ ] Mobile app optimization
+- [ ] PWA (Progressive Web App) for installable experience
 - [ ] Community features (sharing decks, etc.)
 
 ---
@@ -350,8 +380,8 @@ Before implementing, consider asking potential users:
 
 ---
 
-**Last Updated:** 2025-11-16
-**Status:** Phase 1, 2, and 4 complete.
+**Last Updated:** 2025-11-19
+**Status:** Phase 1, 2, 4, and most of Phase 5 complete.
 
 **Completed Features:**
 - ✅ Dual translation system (Taiwan Mandarin + Taiwanese)
@@ -359,14 +389,24 @@ Before implementing, consider asking potential users:
 - ✅ Advanced romanization with AI heteronym disambiguation
 - ✅ Automatic number conversion (Arabic → Chinese → Tâi-lô)
 - ✅ Manual dictionary override system
-- ✅ Flashcard system with SRS algorithm
-- ✅ Learning modules with real-time streaming generation
+- ✅ Flashcard system with SRS algorithm (4 difficulty levels)
+- ✅ Learning modules with real-time streaming generation (AI-powered)
+- ✅ Interactive Lesson Viewer with 15-unit curriculum
+  - 6-section tabbed navigation
+  - Interactive exercises (drag-and-drop, multiple-choice, fill-in-blank, translation, role-play)
+  - Review checklists with progress tracking
+  - One-click flashcard generation from lessons
+- ✅ Supabase integration for persistent audio caching
+  - 3-tier caching: In-memory → Supabase → Hapsing API
+  - Pre-cached lesson audio (36 phrases from Unit 1)
 - ✅ Batch flashcard creation from vocabulary lists
 - ✅ Audio playback for all Taiwanese content
-- ✅ localStorage persistence for flashcards
+- ✅ localStorage persistence for flashcards and progress
+- ✅ Mobile responsiveness (optimized for all screen sizes)
 
 **Next Priorities:**
 - [ ] Progress tracking and statistics dashboard
 - [ ] Quiz modes (translation, listening comprehension)
-- [ ] Tone Sandhi Trainer
+- [ ] Vocabulary Difference Trainer (unique to this app!)
+- [ ] Tone Sandhi Trainer (fills major gap in Taiwanese resources)
 - [ ] Daily challenge system
