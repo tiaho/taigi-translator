@@ -43,6 +43,11 @@ A React-based web application for romanizing Taiwanese text, featuring Tâi-lô 
   - Achievements and milestones (6 goals with progress bars)
   - Visual charts and progress indicators
   - Automatic tracking of all learning activities
+- 🎯 **Daily Challenge System**: Stay motivated with daily goals
+  - 5 rotating challenge types (review, quiz, vocabulary, streak)
+  - Automatic daily reset
+  - Real-time progress tracking
+  - Completion rewards and status
 - 📖 **Learning Modules**: Interactive contextual dialogues
   - Real-world scenarios (At the Bus Stop, At the Doctor, etc.)
   - Side-by-side Mandarin and Taiwanese
@@ -217,6 +222,20 @@ npm run preview
    - 6 milestones with progress bars
    - Unlock achievements by reaching goals
 6. **All progress automatically tracked** - just study and watch your stats grow!
+
+### Daily Challenge System
+
+1. **View today's challenge** at the top of the Statistics Dashboard
+2. **5 rotating challenge types** that change daily:
+   - Flashcard Review Master: Review 10 flashcards
+   - Quiz Champion: Complete 2 quizzes with 80%+ score
+   - Vocabulary Builder: Create 5 new flashcards
+   - Perfect Performance: Score 100% on any quiz
+   - Consistency is Key: Maintain your study streak
+3. **Track progress in real-time**: Visual progress bar shows completion status
+4. **Automatic daily reset**: New challenge appears each day
+5. **Earn completion rewards**: Build consistency and stay motivated
+6. **Integrated tracking**: Progress updates automatically as you study
 
 ### Learning Modules
 

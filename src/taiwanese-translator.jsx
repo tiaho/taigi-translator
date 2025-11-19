@@ -118,6 +118,26 @@ export default function TaiwaneseTranslator() {
     }
   });
 
+  // Daily Challenge state
+  const [dailyChallenge, setDailyChallenge] = useState(() => {
+    try {
+      const saved = localStorage.getItem('dailyChallenge');
+      if (saved) {
+        const challenge = JSON.parse(saved);
+        const today = new Date().toISOString().split('T')[0];
+        // Reset challenge if it's a new day
+        if (challenge.date !== today) {
+          return generateDailyChallenge();
+        }
+        return challenge;
+      }
+      return generateDailyChallenge();
+    } catch (e) {
+      console.error('Error loading daily challenge:', e);
+      return generateDailyChallenge();
+    }
+  });
+
   const audioRef = React.useRef(null);
   const debounceTimerRef = React.useRef(null);
 
@@ -249,6 +269,129 @@ export default function TaiwaneseTranslator() {
 
     stats.studySessions.lastStudyDate = today;
     stats.studySessions.totalSessions += 1;
+
+    // Update daily challenge for study streak
+    if (stats.studySessions.currentStreak >= 1) {
+      updateChallengeProgress('streak', 1);
+    }
+  };
+
+  // Daily Challenge helper functions
+  function generateDailyChallenge() {
+    const today = new Date().toISOString().split('T')[0];
+    const challengeTypes = [
+      {
+        id: 'review_cards',
+        type: 'review',
+        title: 'Flashcard Review Master',
+        description: 'Review 10 flashcards',
+        icon: '🃏',
+        goal: 10,
+        reward: 'Study streak +1',
+        color: 'from-blue-500 to-indigo-500'
+      },
+      {
+        id: 'quiz_master',
+        type: 'quiz',
+        title: 'Quiz Champion',
+        description: 'Complete 2 quizzes with 80%+ score',
+        icon: '🏆',
+        goal: 2,
+        reward: 'Quiz master badge',
+        color: 'from-green-500 to-emerald-500'
+      },
+      {
+        id: 'learn_new_words',
+        type: 'flashcard',
+        title: 'Vocabulary Builder',
+        description: 'Create 5 new flashcards',
+        icon: '📚',
+        goal: 5,
+        reward: 'Word collector badge',
+        color: 'from-purple-500 to-pink-500'
+      },
+      {
+        id: 'perfect_score',
+        type: 'quiz',
+        title: 'Perfect Performance',
+        description: 'Score 100% on any quiz',
+        icon: '⭐',
+        goal: 1,
+        reward: 'Perfect score badge',
+        color: 'from-yellow-500 to-orange-500'
+      },
+      {
+        id: 'study_streak',
+        type: 'streak',
+        title: 'Consistency is Key',
+        description: 'Maintain your study streak',
+        icon: '🔥',
+        goal: 1,
+        reward: 'Streak bonus',
+        color: 'from-red-500 to-orange-500'
+      }
+    ];
+
+    // Select a random challenge for today
+    const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+    const challengeIndex = dayOfYear % challengeTypes.length;
+    const todaysChallenge = challengeTypes[challengeIndex];
+
+    return {
+      ...todaysChallenge,
+      date: today,
+      progress: 0,
+      completed: false,
+      completedAt: null
+    };
+  }
+
+  const saveDailyChallenge = (challenge) => {
+    try {
+      localStorage.setItem('dailyChallenge', JSON.stringify(challenge));
+    } catch (e) {
+      console.error('Error saving daily challenge:', e);
+    }
+  };
+
+  const updateChallengeProgress = (type, amount = 1) => {
+    const challenge = { ...dailyChallenge };
+
+    // Check if challenge type matches the action
+    if (challenge.type !== type || challenge.completed) return;
+
+    // Update progress
+    challenge.progress = Math.min(challenge.progress + amount, challenge.goal);
+
+    // Check if completed
+    if (challenge.progress >= challenge.goal) {
+      challenge.completed = true;
+      challenge.completedAt = new Date().toISOString();
+    }
+
+    setDailyChallenge(challenge);
+    saveDailyChallenge(challenge);
+  };
+
+  const checkQuizChallenge = (score, total) => {
+    const challenge = { ...dailyChallenge };
+
+    if (challenge.type !== 'quiz' || challenge.completed) return;
+
+    // For "quiz_master" challenge: need 80%+ score
+    if (challenge.id === 'quiz_master') {
+      const percentage = (score / total) * 100;
+      if (percentage >= 80) {
+        updateChallengeProgress('quiz', 1);
+      }
+    }
+    // For "perfect_score" challenge: need 100%
+    else if (challenge.id === 'perfect_score') {
+      const percentage = (score / total) * 100;
+      if (percentage === 100) {
+        updateChallengeProgress('quiz', 1);
+      }
+    }
   };
 
   const commonPhrases = [
@@ -872,6 +1015,9 @@ export default function TaiwaneseTranslator() {
     } catch (e) {
       console.error('Error saving flashcard:', e);
     }
+
+    // Update daily challenge progress
+    updateChallengeProgress('flashcard', 1);
   };
 
   const createFlashcardsFromVocabList = (category) => {
@@ -1048,6 +1194,9 @@ export default function TaiwaneseTranslator() {
 
     // Record review statistics
     recordFlashcardReview(card.id, difficulty);
+
+    // Update daily challenge progress
+    updateChallengeProgress('review', 1);
 
     // Move to next card
     nextCard();
@@ -1380,6 +1529,10 @@ export default function TaiwaneseTranslator() {
     } else {
       // Record quiz completion statistics
       recordQuizCompletion(quizMode, quizScore.correct, quizScore.total);
+
+      // Check daily challenge progress
+      checkQuizChallenge(quizScore.correct, quizScore.total);
+
       setQuizComplete(true);
     }
   };
@@ -2826,6 +2979,92 @@ export default function TaiwaneseTranslator() {
         {/* Statistics Dashboard Section */}
         {activeSection === 'statistics' && (
           <div className="mt-4 md:mt-6 space-y-4 md:space-y-6">
+            {/* Daily Challenge Card */}
+            <div className={`bg-white rounded-lg shadow-xl overflow-hidden border-2 ${
+              dailyChallenge.completed ? 'border-green-400' : 'border-indigo-200'
+            }`}>
+              <div className={`bg-gradient-to-r ${dailyChallenge.color} p-4 md:p-6 text-white`}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <div className="text-3xl md:text-4xl">{dailyChallenge.icon}</div>
+                    <div>
+                      <h3 className="text-lg md:text-xl font-bold">Daily Challenge</h3>
+                      <p className="text-xs md:text-sm opacity-90">
+                        {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                      </p>
+                    </div>
+                  </div>
+                  {dailyChallenge.completed && (
+                    <div className="bg-white bg-opacity-20 rounded-full p-2 md:p-3">
+                      <CheckCircle className="w-6 h-6 md:w-8 md:h-8" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="p-4 md:p-6">
+                <div className="mb-4">
+                  <h4 className="text-base md:text-lg font-bold text-gray-800 mb-1">{dailyChallenge.title}</h4>
+                  <p className="text-sm md:text-base text-gray-600">{dailyChallenge.description}</p>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="mb-4">
+                  <div className="flex items-center justify-between text-xs md:text-sm mb-2">
+                    <span className="font-medium text-gray-700">Progress</span>
+                    <span className="font-bold text-gray-900">
+                      {dailyChallenge.progress} / {dailyChallenge.goal}
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-3 md:h-4">
+                    <div
+                      className={`bg-gradient-to-r ${dailyChallenge.color} h-3 md:h-4 rounded-full transition-all duration-500 flex items-center justify-end pr-1`}
+                      style={{ width: `${(dailyChallenge.progress / dailyChallenge.goal) * 100}%` }}
+                    >
+                      {dailyChallenge.progress > 0 && (
+                        <span className="text-white text-xs font-bold">
+                          {Math.round((dailyChallenge.progress / dailyChallenge.goal) * 100)}%
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Reward */}
+                <div className={`p-3 md:p-4 rounded-lg ${
+                  dailyChallenge.completed
+                    ? 'bg-green-50 border-2 border-green-400'
+                    : 'bg-gray-50 border border-gray-200'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Award className={`w-4 h-4 md:w-5 md:h-5 ${
+                        dailyChallenge.completed ? 'text-green-600' : 'text-gray-500'
+                      }`} />
+                      <span className={`text-xs md:text-sm font-medium ${
+                        dailyChallenge.completed ? 'text-green-700' : 'text-gray-600'
+                      }`}>
+                        Reward: {dailyChallenge.reward}
+                      </span>
+                    </div>
+                    {dailyChallenge.completed && (
+                      <span className="text-xs md:text-sm font-bold text-green-700">
+                        ✓ Claimed!
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {dailyChallenge.completed && dailyChallenge.completedAt && (
+                  <div className="mt-3 text-center">
+                    <p className="text-xs md:text-sm text-gray-500">
+                      Completed at {new Date(dailyChallenge.completedAt).toLocaleTimeString()}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Header */}
             <div className="bg-white rounded-lg shadow-xl overflow-hidden">
               <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-4 md:p-6 text-white">

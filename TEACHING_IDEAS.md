@@ -283,7 +283,13 @@ This document contains ideas for educational features to add to the Taiwanese tr
   - Visual charts and progress bars
   - Automatic tracking of all learning activities
   - localStorage persistence
-- [ ] Daily challenge system
+- ✅ Daily challenge system (DONE)
+  - 5 rotating challenge types (review cards, quiz master, vocabulary builder, perfect score, study streak)
+  - Daily automatic reset based on date
+  - Progress tracking with visual progress bar
+  - Rewards and completion status
+  - Integrated with flashcard creation, reviews, quizzes, and study streaks
+  - localStorage persistence
 
 ### Phase 3: Advanced Features (Week 5-6)
 - [ ] Vocabulary Difference Trainer
@@ -413,6 +419,11 @@ Before implementing, consider asking potential users:
   - Quiz performance analytics (mode comparison, recent history)
   - Achievements and milestones system (6 achievements)
   - Automatic tracking of all learning activities
+- ✅ Daily challenge system
+  - 5 rotating challenge types for variety
+  - Automatic daily reset
+  - Real-time progress tracking
+  - Completion rewards and status
 - ✅ Learning modules with real-time streaming generation (AI-powered)
 - ✅ Interactive Lesson Viewer with 15-unit curriculum
   - 6-section tabbed navigation
@@ -430,6 +441,6 @@ Before implementing, consider asking potential users:
 **Next Priorities:**
 - [ ] Vocabulary Difference Trainer (unique to this app!)
 - [ ] Tone Sandhi Trainer (fills major gap in Taiwanese resources)
-- [ ] Daily challenge system
 - [ ] Export/import flashcards functionality
 - [ ] Learning analytics graphs (progress over time)
+- [ ] Leaderboard/social features (optional)
