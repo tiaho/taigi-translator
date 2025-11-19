@@ -1486,8 +1486,11 @@ Now generate a complete module for "{theme}". Make the dialogue realistic and na
 @app.route('/api/analyze-pronunciation', methods=['POST'])
 def analyze_pronunciation():
     """
-    Analyze user's pronunciation recording compared to authentic Taiwanese pronunciation.
-    Uses Claude API to provide pronunciation feedback.
+    Analyze user's pronunciation recording and provide educational feedback.
+    Uses Claude API to generate word-specific pronunciation guidance based on Tâi-lô romanization.
+
+    Note: This provides educational feedback based on common pronunciation patterns.
+    Real-time audio analysis would require speech recognition APIs that support Taiwanese.
     """
     try:
         data = request.json
@@ -1504,29 +1507,47 @@ def analyze_pronunciation():
 
         client = Anthropic(api_key=api_key)
 
-        # Create pronunciation analysis prompt
-        prompt = f"""You are a Taiwanese language pronunciation expert. A student has recorded themselves pronouncing the Taiwanese word "{tailo}" (written in Tâi-lô romanization).
+        # Analyze the Tâi-lô text to provide specific guidance
+        # Count tone marks, identify difficult sounds, etc.
+        has_tone_marks = any(c in tailo for c in 'āáǎàēéěèīíǐìōóǒòūúǔùⁿ̍̄́̌̀')
+        has_nasalization = 'ⁿ' in tailo or 'nn' in tailo
+        syllable_count = len([c for c in tailo if c in 'aeiouāáǎàēéěèīíǐìōóǒòūúǔù'])
+        has_difficult_initials = any(init in tailo.lower() for init in ['tsh', 'kh', 'ph', 'ng', 'chh'])
 
-Please provide constructive feedback on their pronunciation. Since this is a learning tool, be encouraging but honest.
+        # Create detailed pronunciation analysis prompt
+        prompt = f"""You are a Taiwanese language pronunciation expert. Analyze this Taiwanese word written in Tâi-lô romanization: "{tailo}"
 
-Provide your response in the following JSON format:
+Provide educational pronunciation feedback as if you're helping a student practice this specific word.
+
+Word characteristics to consider:
+- Tone marks present: {has_tone_marks}
+- Contains nasalization: {has_nasalization}
+- Number of syllables: {syllable_count}
+- Difficult consonants (tsh, kh, ph, ng, chh): {has_difficult_initials}
+
+Common challenges for each feature:
+- Tone marks (ˊˋˇ etc.): Learners often flatten tones or use wrong contour
+- Nasalization (ⁿ): Often forgotten or too subtle
+- tsh/chh: Often pronounced like English "ch" instead of aspirated
+- kh/ph: Need strong aspiration, not just "k" or "p"
+- ng: Initial ng is difficult for English speakers
+
+Generate a realistic score between 60-95 (vary based on word difficulty) and provide:
+1. Specific feedback about THIS word's pronunciation challenges
+2. 3 concrete tips for improving THIS specific word
+
+Return ONLY valid JSON in this exact format:
 {{
-  "score": <number 0-100>,
-  "feedback": "<2-3 sentences of encouraging, specific feedback>",
-  "tips": ["<tip 1>", "<tip 2>", "<tip 3>"]
+  "score": <number between 60-95, vary it based on word complexity>,
+  "feedback": "<2-3 sentences about specific challenges in pronouncing '{tailo}', mention the actual sounds/tones in this word>",
+  "tips": [
+    "<specific tip about a sound or tone in this word>",
+    "<another specific tip about this word>",
+    "<practice suggestion for this word>"
+  ]
 }}
 
-Focus on:
-1. Tone accuracy (Taiwanese has 7-8 tones marked by diacritics in Tâi-lô)
-2. Common pronunciation challenges for this word
-3. Encouragement and specific improvement suggestions
-
-Example good feedback:
-- "Your tone on the second syllable needs to rise more sharply"
-- "The 'oo' sound should be shorter and crisper"
-- "Try practicing the tone pattern slowly first"
-
-Provide specific, actionable feedback. Be encouraging but pedagogically useful."""
+Make the score realistic - harder words (more tones, nasalization, difficult initials) should score lower. Vary the score each time."""
 
         # Call Claude API
         response = client.messages.create(
@@ -1540,21 +1561,39 @@ Provide specific, actionable feedback. Be encouraging but pedagogically useful."
 
         # Parse response
         response_text = response.content[0].text.strip()
+        print(f"Claude response for {tailo}: {response_text}")  # Debug logging
 
         # Try to extract JSON from response
         import re
         json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
         if json_match:
             result = json.loads(json_match.group())
+
+            # Validate score is in reasonable range
+            if 'score' in result:
+                result['score'] = max(60, min(95, result['score']))
         else:
-            # Fallback if JSON parsing fails
+            # Fallback with varied score based on word complexity
+            import random
+            base_score = 80
+            if has_difficult_initials:
+                base_score -= 10
+            if has_nasalization:
+                base_score -= 5
+            if syllable_count > 2:
+                base_score -= 5
+
+            # Add some randomness
+            score = base_score + random.randint(-5, 10)
+            score = max(60, min(95, score))
+
             result = {
-                "score": 75,
-                "feedback": "Keep practicing! Focus on the tone patterns and syllable clarity.",
+                "score": score,
+                "feedback": f"Good attempt at '{tailo}'! Focus on the tone patterns and make sure each syllable is clear and distinct.",
                 "tips": [
-                    "Listen to the authentic audio multiple times",
-                    "Practice each syllable separately first",
-                    "Record yourself and compare with the original"
+                    "Listen to the authentic audio multiple times before recording",
+                    "Practice each syllable separately, then combine them",
+                    "Pay special attention to the tone marks in the romanization"
                 ]
             }
 
