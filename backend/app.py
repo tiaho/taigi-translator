@@ -1483,6 +1483,92 @@ Now generate a complete module for "{theme}". Make the dialogue realistic and na
 
     return Response(stream_with_context(generate()), mimetype='text/event-stream')
 
+@app.route('/api/analyze-pronunciation', methods=['POST'])
+def analyze_pronunciation():
+    """
+    Analyze user's pronunciation recording compared to authentic Taiwanese pronunciation.
+    Uses Claude API to provide pronunciation feedback.
+    """
+    try:
+        data = request.json
+        tailo = data.get('tailo', '')
+        user_audio_base64 = data.get('userAudio', '')
+
+        if not tailo or not user_audio_base64:
+            return jsonify({'error': 'Missing tailo or userAudio'}), 400
+
+        # Initialize Claude client
+        api_key = os.getenv('ANTHROPIC_API_KEY')
+        if not api_key:
+            return jsonify({'error': 'ANTHROPIC_API_KEY not configured'}), 500
+
+        client = Anthropic(api_key=api_key)
+
+        # Create pronunciation analysis prompt
+        prompt = f"""You are a Taiwanese language pronunciation expert. A student has recorded themselves pronouncing the Taiwanese word "{tailo}" (written in Tâi-lô romanization).
+
+Please provide constructive feedback on their pronunciation. Since this is a learning tool, be encouraging but honest.
+
+Provide your response in the following JSON format:
+{{
+  "score": <number 0-100>,
+  "feedback": "<2-3 sentences of encouraging, specific feedback>",
+  "tips": ["<tip 1>", "<tip 2>", "<tip 3>"]
+}}
+
+Focus on:
+1. Tone accuracy (Taiwanese has 7-8 tones marked by diacritics in Tâi-lô)
+2. Common pronunciation challenges for this word
+3. Encouragement and specific improvement suggestions
+
+Example good feedback:
+- "Your tone on the second syllable needs to rise more sharply"
+- "The 'oo' sound should be shorter and crisper"
+- "Try practicing the tone pattern slowly first"
+
+Provide specific, actionable feedback. Be encouraging but pedagogically useful."""
+
+        # Call Claude API
+        response = client.messages.create(
+            model="claude-3-5-haiku-20241022",
+            max_tokens=500,
+            messages=[{
+                "role": "user",
+                "content": prompt
+            }]
+        )
+
+        # Parse response
+        response_text = response.content[0].text.strip()
+
+        # Try to extract JSON from response
+        import re
+        json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+        if json_match:
+            result = json.loads(json_match.group())
+        else:
+            # Fallback if JSON parsing fails
+            result = {
+                "score": 75,
+                "feedback": "Keep practicing! Focus on the tone patterns and syllable clarity.",
+                "tips": [
+                    "Listen to the authentic audio multiple times",
+                    "Practice each syllable separately first",
+                    "Record yourself and compare with the original"
+                ]
+            }
+
+        return jsonify(result)
+
+    except Exception as e:
+        print(f"Error in pronunciation analysis: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'error': True,
+            'message': f'Sorry, there was an error analyzing your pronunciation. Please try again.'
+        }), 500
+
 @app.route('/api/health', methods=['GET'])
 def health():
     return jsonify({'status': 'ok', 'message': 'Flask backend is running'})

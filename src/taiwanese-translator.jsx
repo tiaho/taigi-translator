@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeftRight, Volume2, BookOpen, Loader2, Languages, Library, Home, CreditCard, GraduationCap, BookMarked, MessageSquare, Mic, Trash2, Play, Square } from 'lucide-react';
+import { ArrowLeftRight, Volume2, BookOpen, Loader2, Languages, Library, Home, CreditCard, GraduationCap, BookMarked, MessageSquare, Mic, Trash2, Play, Square, Brain, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
 export default function TaiwaneseTranslator() {
   const [inputText, setInputText] = useState('');
@@ -81,6 +81,8 @@ export default function TaiwaneseTranslator() {
   });
   const [recordingWordKey, setRecordingWordKey] = useState(null); // Tailo of word being recorded
   const [isPlayingRecording, setIsPlayingRecording] = useState(null); // Tailo of recording being played
+  const [pronunciationAnalysis, setPronunciationAnalysis] = useState({}); // Analysis results by wordKey
+  const [analyzingWordKey, setAnalyzingWordKey] = useState(null); // Word currently being analyzed
   const mediaRecorderRef = React.useRef(null);
   const recordingChunksRef = React.useRef([]);
   const userAudioRef = React.useRef(null); // Separate ref for user recording playback
@@ -755,6 +757,57 @@ export default function TaiwaneseTranslator() {
         userAudioRef.current.pause();
         userAudioRef.current.currentTime = 0;
       }
+    }
+
+    // Also clear analysis for this word
+    setPronunciationAnalysis(prev => {
+      const updated = { ...prev };
+      delete updated[wordKey];
+      return updated;
+    });
+  };
+
+  const analyzePronunciation = async (wordKey, tailo, userRecordingBase64) => {
+    setAnalyzingWordKey(wordKey);
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${apiUrl}/api/analyze-pronunciation`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tailo: tailo,
+          userAudio: userRecordingBase64,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Analysis failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      // Store the analysis result
+      setPronunciationAnalysis(prev => ({
+        ...prev,
+        [wordKey]: result
+      }));
+
+    } catch (error) {
+      console.error('Error analyzing pronunciation:', error);
+
+      // Store error state
+      setPronunciationAnalysis(prev => ({
+        ...prev,
+        [wordKey]: {
+          error: true,
+          message: error.message || 'Failed to analyze pronunciation. Please try again.'
+        }
+      }));
+    } finally {
+      setAnalyzingWordKey(null);
     }
   };
 
@@ -1810,6 +1863,8 @@ export default function TaiwaneseTranslator() {
                   const hasRecording = recordings[wordKey];
                   const isRecordingThis = recordingWordKey === wordKey;
                   const isPlayingThis = isPlayingRecording === wordKey;
+                  const analysis = pronunciationAnalysis[wordKey];
+                  const isAnalyzing = analyzingWordKey === wordKey;
 
                   return (
                     <div
@@ -1896,6 +1951,29 @@ export default function TaiwaneseTranslator() {
                             </button>
                           )}
 
+                          {/* Analyze pronunciation button (only show if recording exists) */}
+                          {hasRecording && !analysis && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                analyzePronunciation(wordKey, word.tailo, recordings[wordKey]);
+                              }}
+                              disabled={isAnalyzing}
+                              className={`p-2 rounded-lg transition-colors ${
+                                isAnalyzing
+                                  ? 'bg-orange-400 cursor-not-allowed'
+                                  : 'bg-orange-600 hover:bg-orange-700'
+                              } text-white`}
+                              title="Analyze pronunciation with AI"
+                            >
+                              {isAnalyzing ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <Brain className="w-3 h-3" />
+                              )}
+                            </button>
+                          )}
+
                           {/* Delete recording button (only show if recording exists) */}
                           {hasRecording && (
                             <button
@@ -1913,6 +1991,60 @@ export default function TaiwaneseTranslator() {
                           )}
                         </div>
                       </div>
+
+                      {/* Pronunciation Analysis Results */}
+                      {analysis && (
+                        <div className={`mt-3 p-3 rounded-lg border-2 ${
+                          analysis.error
+                            ? 'bg-red-50 border-red-200'
+                            : analysis.score >= 80
+                              ? 'bg-green-50 border-green-200'
+                              : analysis.score >= 60
+                                ? 'bg-yellow-50 border-yellow-200'
+                                : 'bg-orange-50 border-orange-200'
+                        }`}>
+                          <div className="flex items-start gap-2">
+                            {analysis.error ? (
+                              <XCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                            ) : analysis.score >= 80 ? (
+                              <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                            ) : (
+                              <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                            )}
+                            <div className="flex-1">
+                              <p className="text-sm font-semibold text-gray-800 mb-1">
+                                {analysis.error ? '❌ Analysis Error' : '🎯 AI Pronunciation Analysis'}
+                              </p>
+                              {analysis.error ? (
+                                <p className="text-xs text-red-700">{analysis.message}</p>
+                              ) : (
+                                <>
+                                  <div className="mb-2">
+                                    <p className="text-xs font-medium text-gray-700">
+                                      Score: <span className={`font-bold ${
+                                        analysis.score >= 80 ? 'text-green-700' :
+                                        analysis.score >= 60 ? 'text-yellow-700' :
+                                        'text-orange-700'
+                                      }`}>{analysis.score}/100</span>
+                                    </p>
+                                  </div>
+                                  <p className="text-xs text-gray-700 leading-relaxed">{analysis.feedback}</p>
+                                  {analysis.tips && analysis.tips.length > 0 && (
+                                    <div className="mt-2">
+                                      <p className="text-xs font-medium text-gray-700 mb-1">Tips:</p>
+                                      <ul className="text-xs text-gray-600 space-y-0.5 ml-3">
+                                        {analysis.tips.map((tip, idx) => (
+                                          <li key={idx} className="list-disc">{tip}</li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
