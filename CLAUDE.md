@@ -201,7 +201,9 @@ Preview the production build locally.
     - Batch add all vocabulary to flashcards
     - Audio playback for each dialogue line
 15. **Interactive Lesson Viewer**: Structured 15-unit curriculum with interactive features
-    - **Tabbed Navigation**: 6 sections (Overview, Vocabulary, Grammar, Dialogues, Culture, Exercises)
+    - **Units Page**: Central hub showing all units with lessons listed below each unit
+    - **Lesson Navigation**: Click on any lesson to view content, "Back to Units" button to return
+    - **Tabbed Navigation**: 6 sections within each lesson (Overview, Vocabulary, Grammar, Dialogues, Culture, Exercises)
     - **Interactive Review Checklist**: Click to check off learning objectives (persists in localStorage per lesson)
     - **Interactive Exercises**:
       - Drag-and-drop matching: Taiwanese phrases on left, draggable English answers on right with sticky positioning
@@ -214,12 +216,18 @@ Preview the production build locally.
     - **Audio Pre-caching**: Server-side pre-caching of all lesson audio for instant playback
     - **Component**: `src/components/LessonViewer.jsx` - Loads lesson data from `src/data/lessons/*.json`
 16. **Common Phrases**: 11 pre-loaded phrases with instant audio playback
-17. **Clean UI**: No external popups or links - all functionality embedded in the app
+17. **Smart Navigation Menu**: Organized menu with dropdown for advanced features
+    - **Main tabs**: Translator, Lessons, Flashcards (always visible)
+    - **More dropdown**: Learning Modules, Vocabulary Lists, Common Phrases
+    - **Active indicators**: Highlights current section, "More" button highlights when dropdown items active
+    - **Animated chevron**: Rotates when dropdown opens/closes
+18. **Clean UI**: No external popups or links - all functionality embedded in the app
 
 ## Architecture
 
 ### Frontend (`src/taiwanese-translator.jsx`)
-- Single-page React component with language toggle (English/Mandarin ↔ Taiwanese)
+- Single-page React component with smart navigation menu
+- **Navigation system**: Main tabs + dropdown menu for advanced features
 - Manages translation state (input, output, romanization, Han characters)
 - Calls Flask backend `/api/romanize` for translation + romanization
 - Fetches audio from backend `/api/audio` proxy (avoids CORS issues)

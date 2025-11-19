@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ArrowLeftRight, Volume2, BookOpen, Loader2, Languages, Library, Home, CreditCard, GraduationCap, BookMarked, MessageSquare } from 'lucide-react';
+import { ArrowLeftRight, Volume2, BookOpen, Loader2, Languages, Library, Home, CreditCard, GraduationCap, BookMarked, MessageSquare, ChevronDown, MoreHorizontal } from 'lucide-react';
+import LessonViewer from './components/LessonViewer';
 
 export default function TaiwaneseTranslator() {
   const [inputText, setInputText] = useState('');
@@ -56,7 +57,9 @@ export default function TaiwaneseTranslator() {
   const [pronunciationGuide, setPronunciationGuide] = useState('');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [audioError, setAudioError] = useState('');
-  const [activeSection, setActiveSection] = useState('translator'); // 'translator', 'flashcards', 'modules', 'vocabulary', 'phrases'
+  const [activeSection, setActiveSection] = useState('translator'); // 'translator', 'lessons', 'flashcards', 'modules', 'vocabulary', 'phrases'
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [selectedLesson, setSelectedLesson] = useState(null); // null = show units page, lesson ID = show lesson
   const audioRef = React.useRef(null);
   const debounceTimerRef = React.useRef(null);
 
@@ -1171,25 +1174,37 @@ export default function TaiwaneseTranslator() {
           <p className="text-gray-600">台語翻譯 • Tâi-gí Hoan-e̍k</p>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="flex justify-center mb-6">
-          <div className="inline-flex bg-white rounded-lg shadow-lg p-1 gap-1">
+        {/* Navigation Menu */}
+        <div className="flex justify-center mb-6 px-4">
+          <div className="inline-flex bg-white rounded-lg shadow-md p-2 gap-2 relative">
+            {/* Main Tabs */}
             <button
               onClick={() => setActiveSection('translator')}
               className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
                 activeSection === 'translator'
-                  ? 'bg-indigo-600 text-white shadow-md'
+                  ? 'bg-indigo-600 text-white shadow-sm'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
-              <Home className="w-4 h-4" />
+              <Languages className="w-4 h-4" />
               <span className="font-medium">Translator</span>
+            </button>
+            <button
+              onClick={() => setActiveSection('lessons')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
+                activeSection === 'lessons'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <BookOpen className="w-4 h-4" />
+              <span className="font-medium">Lessons</span>
             </button>
             <button
               onClick={() => setActiveSection('flashcards')}
               className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
                 activeSection === 'flashcards'
-                  ? 'bg-indigo-600 text-white shadow-md'
+                  ? 'bg-indigo-600 text-white shadow-sm'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
@@ -1201,44 +1216,69 @@ export default function TaiwaneseTranslator() {
                 </span>
               )}
             </button>
-            <button
-              onClick={() => setActiveSection('modules')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
-                activeSection === 'modules'
-                  ? 'bg-indigo-600 text-white shadow-md'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              <GraduationCap className="w-4 h-4" />
-              <span className="font-medium">Learning</span>
-              {learningModules.length > 0 && (
-                <span className="text-xs bg-indigo-200 text-indigo-800 px-2 py-0.5 rounded-full">
-                  {learningModules.length}
-                </span>
+
+            {/* More Dropdown Button */}
+            <div className="relative">
+              <button
+                onClick={() => setShowMoreMenu(!showMoreMenu)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
+                  ['modules', 'vocabulary', 'phrases'].includes(activeSection)
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <MoreHorizontal className="w-4 h-4" />
+                <span className="font-medium">More</span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${showMoreMenu ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* Dropdown Menu */}
+              {showMoreMenu && (
+                <div className="absolute top-full mt-1 right-0 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[200px] z-50">
+                  <button
+                    onClick={() => {
+                      setActiveSection('modules');
+                      setShowMoreMenu(false);
+                    }}
+                    className={`w-full flex items-center gap-2 px-4 py-2 hover:bg-gray-100 transition-colors ${
+                      activeSection === 'modules' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-700'
+                    }`}
+                  >
+                    <GraduationCap className="w-4 h-4" />
+                    <span className="font-medium">Learning Modules</span>
+                    {learningModules.length > 0 && (
+                      <span className="ml-auto text-xs bg-indigo-200 text-indigo-800 px-2 py-0.5 rounded-full">
+                        {learningModules.length}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveSection('vocabulary');
+                      setShowMoreMenu(false);
+                    }}
+                    className={`w-full flex items-center gap-2 px-4 py-2 hover:bg-gray-100 transition-colors ${
+                      activeSection === 'vocabulary' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-700'
+                    }`}
+                  >
+                    <BookMarked className="w-4 h-4" />
+                    <span className="font-medium">Vocabulary Lists</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveSection('phrases');
+                      setShowMoreMenu(false);
+                    }}
+                    className={`w-full flex items-center gap-2 px-4 py-2 hover:bg-gray-100 transition-colors ${
+                      activeSection === 'phrases' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-700'
+                    }`}
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    <span className="font-medium">Common Phrases</span>
+                  </button>
+                </div>
               )}
-            </button>
-            <button
-              onClick={() => setActiveSection('vocabulary')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
-                activeSection === 'vocabulary'
-                  ? 'bg-indigo-600 text-white shadow-md'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              <BookMarked className="w-4 h-4" />
-              <span className="font-medium">Vocabulary</span>
-            </button>
-            <button
-              onClick={() => setActiveSection('phrases')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
-                activeSection === 'phrases'
-                  ? 'bg-indigo-600 text-white shadow-md'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              <MessageSquare className="w-4 h-4" />
-              <span className="font-medium">Phrases</span>
-            </button>
+            </div>
           </div>
         </div>
 
@@ -2248,6 +2288,78 @@ export default function TaiwaneseTranslator() {
               )}
           </div>
         </div>
+        )}
+
+        {/* Lessons Section */}
+        {activeSection === 'lessons' && (
+          <div className="mt-6">
+            {!selectedLesson ? (
+              /* Units Page */
+              <div className="bg-white rounded-lg shadow-xl overflow-hidden">
+                <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white">
+                  <h2 className="text-2xl font-bold mb-2">Taiwanese Learning Curriculum</h2>
+                  <p className="text-indigo-100">Choose a unit and lesson to begin your learning journey</p>
+                </div>
+
+                <div className="p-6 space-y-6">
+                  {/* Unit 1 */}
+                  <div className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 border-b border-gray-200">
+                      <h3 className="text-lg font-bold text-indigo-900">Unit 1: Greetings and Basic Politeness</h3>
+                      <p className="text-sm text-indigo-700 mt-1">Learn essential greetings and polite expressions</p>
+                      <div className="flex items-center gap-4 mt-2 text-xs text-indigo-600">
+                        <span className="flex items-center gap-1">
+                          <BookOpen className="w-3 h-3" />
+                          Beginner
+                        </span>
+                        <span>3-4 lessons</span>
+                      </div>
+                    </div>
+                    <div className="p-4 bg-white">
+                      <h4 className="text-sm font-semibold text-gray-700 mb-3">Lessons:</h4>
+                      <div className="space-y-2">
+                        <button
+                          onClick={() => setSelectedLesson('unit-01')}
+                          className="w-full text-left px-4 py-3 rounded-md bg-gray-50 hover:bg-indigo-50 hover:border-indigo-200 border border-gray-200 transition-all group"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold">
+                                1
+                              </div>
+                              <div>
+                                <div className="font-medium text-gray-900 group-hover:text-indigo-600">Lesson 1: Greetings and Basic Politeness</div>
+                                <div className="text-xs text-gray-500">Learn how to greet people and use polite expressions</div>
+                              </div>
+                            </div>
+                            <ChevronDown className="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transform -rotate-90" />
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Placeholder for future units */}
+                  <div className="border border-dashed border-gray-300 rounded-lg p-6 text-center text-gray-400">
+                    <BookOpen className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">More units coming soon...</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* Lesson Viewer */
+              <div>
+                <button
+                  onClick={() => setSelectedLesson(null)}
+                  className="mb-4 flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium"
+                >
+                  <ChevronDown className="w-4 h-4 transform rotate-90" />
+                  Back to Units
+                </button>
+                <LessonViewer lessonId={selectedLesson} />
+              </div>
+            )}
+          </div>
         )}
 
         {/* Footer */}

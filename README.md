@@ -50,6 +50,10 @@ A React-based web application for romanizing Taiwanese text, featuring Tâi-lô 
 - ⚡ **Real-time Streaming**: Server-Sent Events for live module generation
 - 📱 **Responsive Design**: Works on desktop and mobile
 - 🐍 **Python Backend**: MOE Dictionary, TauPhahJi-Command, and Claude API
+- 📋 **Smart Navigation**: Main menu with dropdown for advanced features
+  - **Main tabs**: Translator, Lessons, Flashcards
+  - **More dropdown**: Learning Modules, Vocabulary Lists, Common Phrases
+  - **Units page**: Organized lesson selection with unit structure
 
 ## Setup
 
@@ -178,23 +182,25 @@ npm run preview
 
 ### Interactive Lessons
 
-1. **Access lessons** via "Lessons" in the navigation
-2. **Choose a unit**: 15 units from beginner to advanced
-3. **Navigate sections** using tabs:
+1. **Access lessons** via "Lessons" in the main navigation menu
+2. **Units page**: Browse all available units with their lessons listed below each unit
+3. **Choose a lesson**: Click on any lesson to start learning
+4. **Navigate sections** using tabs within each lesson:
    - **Overview**: Learning objectives and review checklist
    - **Vocabulary**: Core words with audio and flashcard creation
    - **Grammar**: Rules, patterns, and examples
    - **Dialogues**: Realistic conversations with audio
    - **Culture**: Cultural insights and traditions
    - **Exercises**: Interactive practice activities
-4. **Complete exercises**:
+5. **Complete exercises**:
    - Drag-and-drop matching
    - Multiple-choice questions with feedback
    - Fill-in-blank with hints
    - Translation practice
    - Role-play scenarios
-5. **Track progress**: Check off learning objectives in the review checklist
-6. **Create flashcards**: Generate flashcards from lesson content with one click
+6. **Track progress**: Check off learning objectives in the review checklist
+7. **Create flashcards**: Generate flashcards from lesson content with one click
+8. **Navigate back**: Use "Back to Units" button to return to the units page
 
 ### Common Phrases
 
