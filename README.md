@@ -48,6 +48,13 @@ A React-based web application for romanizing Taiwanese text, featuring Tâi-lô 
   - Automatic daily reset
   - Real-time progress tracking
   - Completion rewards and status
+- 📈 **Tone Sandhi Trainer**: Practice tone changes unique to Taiwanese
+  - 15 exercises across 3 difficulty levels (beginner, intermediate, advanced)
+  - Audio comparison: individual characters vs compound words
+  - Tone sandhi rule explanations for each exercise
+  - Toggle breakdown view to see individual character tones
+  - Progress tracking with localStorage persistence
+  - Categories: Transportation, Time, Colors, Technology, Education, Greetings, Politeness
 - 📖 **Learning Modules**: Interactive contextual dialogues
   - Real-world scenarios (At the Bus Stop, At the Doctor, etc.)
   - Side-by-side Mandarin and Taiwanese
@@ -236,6 +243,24 @@ npm run preview
 4. **Automatic daily reset**: New challenge appears each day
 5. **Earn completion rewards**: Build consistency and stay motivated
 6. **Integrated tracking**: Progress updates automatically as you study
+
+### Tone Sandhi Trainer
+
+1. **Access the trainer** via "More" → "Tone Sandhi Trainer" in the navigation menu
+2. **Choose difficulty level**:
+   - Beginner: 2-syllable common words (6 exercises)
+   - Intermediate: 3-syllable words and technical terms (5 exercises)
+   - Advanced: Conversational phrases and complex expressions (4 exercises)
+3. **Study each exercise**:
+   - See the compound word with its pronunciation and meaning
+   - Play audio for the compound word with tone sandhi applied
+   - Click "Show Individual Characters" to see the breakdown
+   - Play audio for each individual character to hear original tones
+   - Compare individual tones vs compound word tones
+4. **Learn tone sandhi rules**: Each exercise includes explanation of which tone change occurred
+5. **Track progress**: Mark exercises as complete and view progress for all levels
+6. **Navigate exercises**: Use Previous/Next buttons to move through exercises
+7. **Practice progressively**: Master beginner level before advancing to intermediate and advanced
 
 ### Learning Modules
 

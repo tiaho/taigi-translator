@@ -57,7 +57,7 @@ export default function TaiwaneseTranslator() {
   const [pronunciationGuide, setPronunciationGuide] = useState('');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [audioError, setAudioError] = useState('');
-  const [activeSection, setActiveSection] = useState('translator'); // 'translator', 'lessons', 'flashcards', 'quiz', 'modules', 'vocabulary', 'phrases'
+  const [activeSection, setActiveSection] = useState('translator'); // 'translator', 'lessons', 'flashcards', 'quiz', 'modules', 'vocabulary', 'phrases', 'tonesandhi'
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [selectedLesson, setSelectedLesson] = useState(null); // null = show units page, lesson ID = show lesson
 
@@ -135,6 +135,29 @@ export default function TaiwaneseTranslator() {
     } catch (e) {
       console.error('Error loading daily challenge:', e);
       return generateDailyChallenge();
+    }
+  });
+
+  // Tone Sandhi Trainer state
+  const [toneSandhiLevel, setToneSandhiLevel] = useState('beginner'); // 'beginner', 'intermediate', 'advanced'
+  const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
+  const [showBreakdown, setShowBreakdown] = useState(false); // Toggle between compound and individual characters
+  const [playingAudioType, setPlayingAudioType] = useState(null); // 'compound' or character index
+  const [toneSandhiProgress, setToneSandhiProgress] = useState(() => {
+    try {
+      const saved = localStorage.getItem('toneSandhiProgress');
+      return saved ? JSON.parse(saved) : {
+        beginner: [],
+        intermediate: [],
+        advanced: []
+      };
+    } catch (e) {
+      console.error('Error loading tone sandhi progress:', e);
+      return {
+        beginner: [],
+        intermediate: [],
+        advanced: []
+      };
     }
   });
 
@@ -394,6 +417,93 @@ export default function TaiwaneseTranslator() {
     }
   };
 
+  // Tone Sandhi Trainer helper functions
+  const saveToneSandhiProgress = (progress) => {
+    try {
+      localStorage.setItem('toneSandhiProgress', JSON.stringify(progress));
+    } catch (e) {
+      console.error('Error saving tone sandhi progress:', e);
+    }
+  };
+
+  const markExerciseComplete = (level, exerciseId) => {
+    const newProgress = { ...toneSandhiProgress };
+    if (!newProgress[level].includes(exerciseId)) {
+      newProgress[level].push(exerciseId);
+      setToneSandhiProgress(newProgress);
+      saveToneSandhiProgress(newProgress);
+    }
+  };
+
+  const playToneSandhiAudio = async (tailo, audioType) => {
+    setPlayingAudioType(audioType);
+    setAudioError('');
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const audioUrl = `${apiUrl}/api/audio?taibun=${encodeURIComponent(tailo)}`;
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 20000);
+
+      const response = await fetch(audioUrl, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch audio: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      if (blob.size === 0) {
+        throw new Error('Received empty audio file');
+      }
+
+      const blobUrl = URL.createObjectURL(blob);
+
+      if (audioRef.current) {
+        audioRef.current.src = blobUrl;
+        audioRef.current.load();
+        await audioRef.current.play();
+      }
+    } catch (error) {
+      console.error('Audio error:', error);
+      setAudioError('Failed to load audio');
+    } finally {
+      // Clear playing state after a short delay
+      setTimeout(() => setPlayingAudioType(null), 1000);
+    }
+  };
+
+  const getCurrentExercises = () => {
+    return toneSandhiExercises[toneSandhiLevel] || [];
+  };
+
+  const getCurrentExercise = () => {
+    const exercises = getCurrentExercises();
+    return exercises[currentExerciseIndex] || null;
+  };
+
+  const nextExercise = () => {
+    const exercises = getCurrentExercises();
+    if (currentExerciseIndex < exercises.length - 1) {
+      setCurrentExerciseIndex(currentExerciseIndex + 1);
+      setShowBreakdown(false);
+    }
+  };
+
+  const previousExercise = () => {
+    if (currentExerciseIndex > 0) {
+      setCurrentExerciseIndex(currentExerciseIndex - 1);
+      setShowBreakdown(false);
+    }
+  };
+
+  const changeToneSandhiLevel = (level) => {
+    setToneSandhiLevel(level);
+    setCurrentExerciseIndex(0);
+    setShowBreakdown(false);
+  };
+
   const commonPhrases = [
     { en: 'Hello', taiwanese: 'Lí hó', han: '你好', tailo: 'Lí hó', pronunciation: 'LEE hoh' },
     { en: 'Thank you', taiwanese: 'To-siā', han: '多謝', tailo: 'To-siā', pronunciation: 'daw-SYAH' },
@@ -467,6 +577,174 @@ export default function TaiwaneseTranslator() {
       { en: 'Speak', mandarin: '說', han: '講', tailo: 'Kóng' },
       { en: 'Sleep', mandarin: '睡', han: '睏', tailo: 'Khùn' },
     ],
+  };
+
+  // Tone Sandhi Training Exercises
+  const toneSandhiExercises = {
+    beginner: [
+      {
+        id: 'ts-001',
+        compound: { han: '跤踏車', tailo: 'kha-ta̍h-tshia', english: 'bicycle', mandarin: '腳踏車' },
+        characters: [
+          { han: '跤', tailo: 'kha', english: 'foot/leg' },
+          { han: '踏', tailo: 'ta̍h', english: 'step on' },
+          { han: '車', tailo: 'tshia', english: 'vehicle' }
+        ],
+        rule: 'In compound words, tones of non-final syllables typically change following tone sandhi rules',
+        category: 'Transportation'
+      },
+      {
+        id: 'ts-002',
+        compound: { han: '公車', tailo: 'kong-tshia', english: 'bus', mandarin: '公車' },
+        characters: [
+          { han: '公', tailo: 'kong', english: 'public' },
+          { han: '車', tailo: 'tshia', english: 'vehicle' }
+        ],
+        rule: 'Tone 1 (high level) before another syllable often remains unchanged',
+        category: 'Transportation'
+      },
+      {
+        id: 'ts-003',
+        compound: { han: '昨昏', tailo: 'tsa-hng', english: 'yesterday', mandarin: '昨天' },
+        characters: [
+          { han: '昨', tailo: 'tsa', english: 'previous' },
+          { han: '昏', tailo: 'hng', english: 'dusk/evening' }
+        ],
+        rule: 'The first syllable undergoes tone change when followed by another syllable',
+        category: 'Time'
+      },
+      {
+        id: 'ts-004',
+        compound: { han: '明仔載', tailo: 'bîn-á-tsài', english: 'tomorrow', mandarin: '明天' },
+        characters: [
+          { han: '明', tailo: 'bîn', english: 'bright' },
+          { han: '仔', tailo: 'á', english: 'diminutive particle' },
+          { han: '載', tailo: 'tsài', english: 'day' }
+        ],
+        rule: 'Multi-syllable compound showing tone sandhi in first syllable',
+        category: 'Time'
+      },
+      {
+        id: 'ts-005',
+        compound: { han: '紅色', tailo: 'âng-sik', english: 'red (color)', mandarin: '紅色' },
+        characters: [
+          { han: '紅', tailo: 'âng', english: 'red' },
+          { han: '色', tailo: 'sik', english: 'color' }
+        ],
+        rule: 'Tone 5 (low rising) changes in compound words',
+        category: 'Colors'
+      },
+      {
+        id: 'ts-006',
+        compound: { han: '藍色', tailo: 'nâ-sik', english: 'blue (color)', mandarin: '藍色' },
+        characters: [
+          { han: '藍', tailo: 'nâ', english: 'blue' },
+          { han: '色', tailo: 'sik', english: 'color' }
+        ],
+        rule: 'Tone 5 (low rising) in first position undergoes tone sandhi',
+        category: 'Colors'
+      }
+    ],
+    intermediate: [
+      {
+        id: 'ts-101',
+        compound: { han: '計程車', tailo: 'kè-thîng-tshia', english: 'taxi', mandarin: '計程車' },
+        characters: [
+          { han: '計', tailo: 'kè', english: 'calculate' },
+          { han: '程', tailo: 'thîng', english: 'distance' },
+          { han: '車', tailo: 'tshia', english: 'vehicle' }
+        ],
+        rule: 'Three-syllable compound: both first and second syllables undergo tone change',
+        category: 'Transportation'
+      },
+      {
+        id: 'ts-102',
+        compound: { han: '台灣人', tailo: 'tâi-uân-lâng', english: 'Taiwanese person', mandarin: '台灣人' },
+        characters: [
+          { han: '台', tailo: 'tâi', english: 'Taiwan' },
+          { han: '灣', tailo: 'uân', english: 'bay' },
+          { han: '人', tailo: 'lâng', english: 'person' }
+        ],
+        rule: 'Proper noun compound with tone sandhi in first two syllables',
+        category: 'People'
+      },
+      {
+        id: 'ts-103',
+        compound: { han: '電腦', tailo: 'tiān-náu', english: 'computer', mandarin: '電腦' },
+        characters: [
+          { han: '電', tailo: 'tiān', english: 'electricity' },
+          { han: '腦', tailo: 'náu', english: 'brain' }
+        ],
+        rule: 'Tone 7 (mid level) changes when followed by another syllable',
+        category: 'Technology'
+      },
+      {
+        id: 'ts-104',
+        compound: { han: '電話', tailo: 'tiān-uē', english: 'telephone', mandarin: '電話' },
+        characters: [
+          { han: '電', tailo: 'tiān', english: 'electricity' },
+          { han: '話', tailo: 'uē', english: 'speech' }
+        ],
+        rule: 'First syllable tone changes in two-syllable compound',
+        category: 'Technology'
+      },
+      {
+        id: 'ts-105',
+        compound: { han: '學生', tailo: 'ha̍k-sing', english: 'student', mandarin: '學生' },
+        characters: [
+          { han: '學', tailo: 'ha̍k', english: 'study' },
+          { han: '生', tailo: 'sing', english: 'person/life' }
+        ],
+        rule: 'Tone 8 (high checked) undergoes tone sandhi before another syllable',
+        category: 'Education'
+      }
+    ],
+    advanced: [
+      {
+        id: 'ts-201',
+        compound: { han: '食飽未', tailo: 'tsia̍h-pá-buē', english: 'Have you eaten?', mandarin: '吃飽了嗎' },
+        characters: [
+          { han: '食', tailo: 'tsia̍h', english: 'eat' },
+          { han: '飽', tailo: 'pá', english: 'full' },
+          { han: '未', tailo: 'buē', english: 'not yet (question particle)' }
+        ],
+        rule: 'Common greeting phrase with tone changes in first two syllables',
+        category: 'Greetings'
+      },
+      {
+        id: 'ts-202',
+        compound: { han: '你好無', tailo: 'lí-hó-bô', english: 'How are you?', mandarin: '你好嗎' },
+        characters: [
+          { han: '你', tailo: 'lí', english: 'you' },
+          { han: '好', tailo: 'hó', english: 'good' },
+          { han: '無', tailo: 'bô', english: 'not (question particle)' }
+        ],
+        rule: 'Question phrase showing tone sandhi across three syllables',
+        category: 'Greetings'
+      },
+      {
+        id: 'ts-203',
+        compound: { han: '對不住', tailo: 'tuì-put-tiū', english: 'sorry/excuse me', mandarin: '對不起' },
+        characters: [
+          { han: '對', tailo: 'tuì', english: 'correct/towards' },
+          { han: '不', tailo: 'put', english: 'not' },
+          { han: '住', tailo: 'tiū', english: 'reside' }
+        ],
+        rule: 'Polite expression with complex tone sandhi pattern',
+        category: 'Politeness'
+      },
+      {
+        id: 'ts-204',
+        compound: { han: '無要緊', tailo: 'bô-iàu-kín', english: "it's okay/no problem", mandarin: '沒關係' },
+        characters: [
+          { han: '無', tailo: 'bô', english: 'not have' },
+          { han: '要', tailo: 'iàu', english: 'need' },
+          { han: '緊', tailo: 'kín', english: 'tight/important' }
+        ],
+        rule: 'Three-syllable phrase commonly used in conversation',
+        category: 'Politeness'
+      }
+    ]
   };
 
   const playPhraseAudio = async (phrase) => {
@@ -1646,7 +1924,7 @@ export default function TaiwaneseTranslator() {
               <button
                 onClick={() => setShowMoreMenu(!showMoreMenu)}
                 className={`flex items-center gap-1 md:gap-2 px-2 md:px-4 py-2 md:py-2 rounded-md transition-all ${
-                  ['modules', 'vocabulary', 'phrases'].includes(activeSection)
+                  ['modules', 'vocabulary', 'phrases', 'tonesandhi'].includes(activeSection)
                     ? 'bg-indigo-600 text-white shadow-sm'
                     : 'text-gray-700 hover:bg-gray-100'
                 }`}
@@ -1699,6 +1977,20 @@ export default function TaiwaneseTranslator() {
                   >
                     <MessageSquare className="w-5 h-5" />
                     <span className="font-medium">Common Phrases</span>
+                  </button>
+
+                  {/* Tone Sandhi Trainer */}
+                  <button
+                    onClick={() => {
+                      setActiveSection('tonesandhi');
+                      setShowMoreMenu(false);
+                    }}
+                    className={`w-full flex items-center gap-2 px-4 py-3 hover:bg-gray-100 transition-colors text-left ${
+                      activeSection === 'tonesandhi' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-700'
+                    }`}
+                  >
+                    <TrendingUp className="w-5 h-5" />
+                    <span className="font-medium">Tone Sandhi Trainer</span>
                   </button>
                 </div>
               )}
@@ -2024,6 +2316,216 @@ export default function TaiwaneseTranslator() {
                   </div>
                 </div>
               ))}
+          </div>
+        </div>
+        )}
+
+        {/* Tone Sandhi Trainer Section */}
+        {activeSection === 'tonesandhi' && (
+        <div className="mt-6 bg-white rounded-lg shadow-md overflow-hidden">
+          <div className="w-full p-4 md:p-6 flex items-center gap-2 bg-gradient-to-r from-purple-50 to-indigo-50 border-b">
+            <TrendingUp className="w-6 h-6 text-purple-600" />
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold text-gray-800">Tone Sandhi Trainer</h2>
+              <p className="text-xs md:text-sm text-gray-600">Practice tone changes in compound words</p>
+            </div>
+          </div>
+
+          <div className="p-4 md:p-6">
+            {/* Level Selection */}
+            <div className="mb-6">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Choose Difficulty Level</h3>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  onClick={() => changeToneSandhiLevel('beginner')}
+                  className={`px-4 py-3 rounded-lg font-medium text-sm transition-all ${
+                    toneSandhiLevel === 'beginner'
+                      ? 'bg-green-600 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  🌱 Beginner
+                  <div className="text-xs opacity-75 mt-1">
+                    {toneSandhiProgress.beginner.length}/{toneSandhiExercises.beginner.length}
+                  </div>
+                </button>
+                <button
+                  onClick={() => changeToneSandhiLevel('intermediate')}
+                  className={`px-4 py-3 rounded-lg font-medium text-sm transition-all ${
+                    toneSandhiLevel === 'intermediate'
+                      ? 'bg-yellow-600 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  ⚡ Intermediate
+                  <div className="text-xs opacity-75 mt-1">
+                    {toneSandhiProgress.intermediate.length}/{toneSandhiExercises.intermediate.length}
+                  </div>
+                </button>
+                <button
+                  onClick={() => changeToneSandhiLevel('advanced')}
+                  className={`px-4 py-3 rounded-lg font-medium text-sm transition-all ${
+                    toneSandhiLevel === 'advanced'
+                      ? 'bg-red-600 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  🔥 Advanced
+                  <div className="text-xs opacity-75 mt-1">
+                    {toneSandhiProgress.advanced.length}/{toneSandhiExercises.advanced.length}
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* Current Exercise */}
+            {getCurrentExercise() && (
+              <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg p-4 md:p-6 mb-6 border border-purple-200">
+                <div className="flex justify-between items-center mb-4">
+                  <div className="text-sm text-purple-700 font-medium">
+                    Exercise {currentExerciseIndex + 1} of {getCurrentExercises().length}
+                  </div>
+                  {toneSandhiProgress[toneSandhiLevel].includes(getCurrentExercise().id) && (
+                    <div className="flex items-center gap-1 text-green-600 text-sm font-medium">
+                      <CheckCircle className="w-4 h-4" />
+                      Completed
+                    </div>
+                  )}
+                </div>
+
+                {/* Compound Word Display */}
+                <div className="bg-white rounded-lg p-4 md:p-6 mb-4 shadow-sm">
+                  <div className="text-center">
+                    <div className="text-xs text-gray-500 uppercase tracking-wide mb-2">Compound Word</div>
+                    <div className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">
+                      {getCurrentExercise().compound.han}
+                    </div>
+                    <div className="text-lg md:text-xl text-purple-600 font-medium mb-1">
+                      {getCurrentExercise().compound.tailo}
+                    </div>
+                    <div className="text-sm text-gray-600 mb-2">
+                      {getCurrentExercise().compound.english}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Mandarin: {getCurrentExercise().compound.mandarin}
+                    </div>
+                    <button
+                      onClick={() => playToneSandhiAudio(getCurrentExercise().compound.tailo, 'compound')}
+                      className="mt-3 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 mx-auto"
+                    >
+                      <Volume2 className={`w-4 h-4 ${playingAudioType === 'compound' ? 'animate-pulse' : ''}`} />
+                      Play Compound Word
+                    </button>
+                  </div>
+                </div>
+
+                {/* Toggle Breakdown Button */}
+                <button
+                  onClick={() => setShowBreakdown(!showBreakdown)}
+                  className="w-full mb-4 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  {showBreakdown ? '🔼 Hide' : '🔽 Show'} Individual Characters
+                </button>
+
+                {/* Individual Characters Breakdown */}
+                {showBreakdown && (
+                  <div className="bg-white rounded-lg p-4 md:p-6 shadow-sm mb-4">
+                    <div className="text-xs text-gray-500 uppercase tracking-wide mb-3 text-center">
+                      Individual Character Tones
+                    </div>
+                    <div className="grid gap-3">
+                      {getCurrentExercise().characters.map((char, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                        >
+                          <div className="flex-1">
+                            <div className="text-2xl font-bold text-gray-800 mb-1">{char.han}</div>
+                            <div className="text-sm text-purple-600 font-medium mb-1">{char.tailo}</div>
+                            <div className="text-xs text-gray-600">{char.english}</div>
+                          </div>
+                          <button
+                            onClick={() => playToneSandhiAudio(char.tailo, idx)}
+                            className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1"
+                          >
+                            <Volume2 className={`w-3 h-3 ${playingAudioType === idx ? 'animate-pulse' : ''}`} />
+                            Play
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tone Sandhi Rule Explanation */}
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="flex items-start gap-2">
+                    <span className="text-yellow-600 font-bold text-lg">💡</span>
+                    <div>
+                      <div className="text-xs font-semibold text-yellow-800 mb-1">Tone Sandhi Rule:</div>
+                      <p className="text-sm text-gray-700">{getCurrentExercise().rule}</p>
+                      <div className="text-xs text-gray-500 mt-2">
+                        Category: {getCurrentExercise().category}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mark as Complete Button */}
+                {!toneSandhiProgress[toneSandhiLevel].includes(getCurrentExercise().id) && (
+                  <button
+                    onClick={() => markExerciseComplete(toneSandhiLevel, getCurrentExercise().id)}
+                    className="w-full mt-4 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                  >
+                    <CheckCircle className="w-5 h-5" />
+                    Mark as Complete
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Navigation Buttons */}
+            <div className="flex gap-2">
+              <button
+                onClick={previousExercise}
+                disabled={currentExerciseIndex === 0}
+                className="flex-1 px-4 py-3 bg-gray-600 hover:bg-gray-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+              >
+                ← Previous
+              </button>
+              <button
+                onClick={nextExercise}
+                disabled={currentExerciseIndex === getCurrentExercises().length - 1}
+                className="flex-1 px-4 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+              >
+                Next →
+              </button>
+            </div>
+
+            {/* Progress Summary */}
+            <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
+              <h3 className="text-sm font-semibold text-green-800 mb-2">📊 Your Progress</h3>
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <div className="text-xs text-gray-600 mb-1">Beginner</div>
+                  <div className="text-lg font-bold text-green-600">
+                    {toneSandhiProgress.beginner.length}/{toneSandhiExercises.beginner.length}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-600 mb-1">Intermediate</div>
+                  <div className="text-lg font-bold text-yellow-600">
+                    {toneSandhiProgress.intermediate.length}/{toneSandhiExercises.intermediate.length}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-600 mb-1">Advanced</div>
+                  <div className="text-lg font-bold text-red-600">
+                    {toneSandhiProgress.advanced.length}/{toneSandhiExercises.advanced.length}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         )}

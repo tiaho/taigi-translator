@@ -338,7 +338,16 @@ This document contains ideas for educational features to add to the Taiwanese tr
 - ✅ Manual dictionary override system (DONE)
   - Common words: 最近 (tsuè-kīn), 公車 (kong-tshia), 看 (khuànn)
   - Always overrides MOE dictionary for consistent pronunciation
-- [ ] Tone Sandhi Trainer
+- ✅ Tone Sandhi Trainer (DONE)
+  - 15 exercises across 3 difficulty levels (beginner, intermediate, advanced)
+  - Audio comparison: Individual characters vs compound words
+  - Real-time audio playback for both individual and compound pronunciations
+  - Toggle breakdown view showing individual character tones
+  - Tone sandhi rule explanations for each exercise
+  - Progress tracking with localStorage persistence
+  - Examples: 跤踏車 (bicycle), 計程車 (taxi), 食飽未 (Have you eaten?)
+  - Progressive difficulty: 2-character → 3-character → conversational phrases
+  - Category organization: Transportation, Time, Colors, Technology, Education, Greetings, Politeness
 - [ ] Pronunciation practice with recording
 - [ ] Word association game
 
@@ -437,10 +446,15 @@ Before implementing, consider asking potential users:
 - ✅ Audio playback for all Taiwanese content
 - ✅ localStorage persistence for flashcards and progress
 - ✅ Mobile responsiveness (optimized for all screen sizes)
+- ✅ Tone Sandhi Trainer
+  - 15 exercises across beginner, intermediate, and advanced levels
+  - Audio comparison for individual characters vs compound words
+  - Tone sandhi rule explanations
+  - Progress tracking and completion marking
+  - Accessible via "More" dropdown menu
 
 **Next Priorities:**
 - [ ] Vocabulary Difference Trainer (unique to this app!)
-- [ ] Tone Sandhi Trainer (fills major gap in Taiwanese resources)
 - [ ] Export/import flashcards functionality
 - [ ] Learning analytics graphs (progress over time)
 - [ ] Leaderboard/social features (optional)
