@@ -381,11 +381,11 @@ const LessonViewer = ({ lessonId }) => {
 
   const renderVocabulary = () => (
     <div className="space-y-4">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-2xl font-bold text-gray-800">Vocabulary ({lessonData.vocabulary.length} words)</h2>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+        <h2 className="text-xl md:text-2xl font-bold text-gray-800">Vocabulary ({lessonData.vocabulary.length} words)</h2>
         <button
           onClick={createFlashcardsFromExercises}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="flex items-center justify-center gap-2 px-4 py-2.5 md:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-colors text-sm md:text-base font-medium"
         >
           <BookmarkPlus className="w-5 h-5" />
           Create Flashcards
@@ -831,15 +831,15 @@ const LessonViewer = ({ lessonId }) => {
           </div>
 
           {/* Section tabs */}
-          <div className="flex gap-2 overflow-x-auto pb-2">
+          <div className="flex gap-1.5 md:gap-2 overflow-x-auto pb-2 scrollbar-hide">
             {sections.map(section => (
               <button
                 key={section.id}
                 onClick={() => setCurrentSection(section.id)}
-                className={`px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
+                className={`px-3 md:px-4 py-2.5 md:py-2 rounded-lg whitespace-nowrap transition-colors text-sm md:text-base font-medium ${
                   currentSection === section.id
                     ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300'
                 }`}
               >
                 {section.name}

@@ -1164,54 +1164,54 @@ export default function TaiwaneseTranslator() {
         className="hidden"
       />
 
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto px-2 md:px-4">
         {/* Header */}
-        <div className="text-center mb-6 pt-8">
-          <div className="flex items-center justify-center gap-3 mb-2">
-            <Languages className="w-10 h-10 text-indigo-600" />
-            <h1 className="text-4xl font-bold text-gray-800">Taiwanese Translator</h1>
+        <div className="text-center mb-4 md:mb-6 pt-4 md:pt-8 px-4">
+          <div className="flex items-center justify-center gap-2 md:gap-3 mb-2">
+            <Languages className="w-8 h-8 md:w-10 md:h-10 text-indigo-600" />
+            <h1 className="text-2xl md:text-4xl font-bold text-gray-800">Taiwanese Translator</h1>
           </div>
-          <p className="text-gray-600">台語翻譯 • Tâi-gí Hoan-e̍k</p>
+          <p className="text-sm md:text-base text-gray-600">台語翻譯 • Tâi-gí Hoan-e̍k</p>
         </div>
 
         {/* Navigation Menu */}
-        <div className="flex justify-center mb-6 px-4">
-          <div className="inline-flex bg-white rounded-lg shadow-md p-2 gap-2 relative">
+        <div className="flex justify-center mb-4 md:mb-6 px-2 md:px-4">
+          <div className="inline-flex bg-white rounded-lg shadow-md p-1.5 md:p-2 gap-1 md:gap-2 relative">
             {/* Main Tabs */}
             <button
               onClick={() => setActiveSection('translator')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
+              className={`flex items-center gap-1 md:gap-2 px-2 md:px-4 py-2 md:py-2 rounded-md transition-all ${
                 activeSection === 'translator'
                   ? 'bg-indigo-600 text-white shadow-sm'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
-              <Languages className="w-4 h-4" />
-              <span className="font-medium">Translator</span>
+              <Languages className="w-5 h-5 md:w-4 md:h-4" />
+              <span className="font-medium text-xs md:text-base hidden sm:inline">Translator</span>
             </button>
             <button
               onClick={() => setActiveSection('lessons')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
+              className={`flex items-center gap-1 md:gap-2 px-2 md:px-4 py-2 md:py-2 rounded-md transition-all ${
                 activeSection === 'lessons'
                   ? 'bg-indigo-600 text-white shadow-sm'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
-              <BookOpen className="w-4 h-4" />
-              <span className="font-medium">Lessons</span>
+              <BookOpen className="w-5 h-5 md:w-4 md:h-4" />
+              <span className="font-medium text-xs md:text-base hidden sm:inline">Lessons</span>
             </button>
             <button
               onClick={() => setActiveSection('flashcards')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
+              className={`flex items-center gap-1 md:gap-2 px-2 md:px-4 py-2 md:py-2 rounded-md transition-all relative ${
                 activeSection === 'flashcards'
                   ? 'bg-indigo-600 text-white shadow-sm'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
-              <CreditCard className="w-4 h-4" />
-              <span className="font-medium">Flashcards</span>
+              <CreditCard className="w-5 h-5 md:w-4 md:h-4" />
+              <span className="font-medium text-xs md:text-base hidden sm:inline">Flashcards</span>
               {flashcards.length > 0 && (
-                <span className="text-xs bg-purple-200 text-purple-800 px-2 py-0.5 rounded-full">
+                <span className="absolute -top-1 -right-1 sm:static text-xs bg-purple-200 text-purple-800 px-1.5 sm:px-2 py-0.5 rounded-full min-w-[20px] text-center">
                   {flashcards.length}
                 </span>
               )}
@@ -1221,15 +1221,15 @@ export default function TaiwaneseTranslator() {
             <div className="relative">
               <button
                 onClick={() => setShowMoreMenu(!showMoreMenu)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all ${
+                className={`flex items-center gap-1 md:gap-2 px-2 md:px-4 py-2 md:py-2 rounded-md transition-all ${
                   ['modules', 'vocabulary', 'phrases'].includes(activeSection)
                     ? 'bg-indigo-600 text-white shadow-sm'
                     : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
-                <MoreHorizontal className="w-4 h-4" />
-                <span className="font-medium">More</span>
-                <ChevronDown className={`w-4 h-4 transition-transform ${showMoreMenu ? 'rotate-180' : ''}`} />
+                <MoreHorizontal className="w-5 h-5 md:w-4 md:h-4" />
+                <span className="font-medium text-xs md:text-base hidden sm:inline">More</span>
+                <ChevronDown className={`w-4 h-4 transition-transform hidden sm:inline ${showMoreMenu ? 'rotate-180' : ''}`} />
               </button>
 
               {/* Dropdown Menu */}
@@ -1240,11 +1240,11 @@ export default function TaiwaneseTranslator() {
                       setActiveSection('modules');
                       setShowMoreMenu(false);
                     }}
-                    className={`w-full flex items-center gap-2 px-4 py-2 hover:bg-gray-100 transition-colors ${
+                    className={`w-full flex items-center gap-2 px-4 py-3 hover:bg-gray-100 transition-colors text-left ${
                       activeSection === 'modules' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-700'
                     }`}
                   >
-                    <GraduationCap className="w-4 h-4" />
+                    <GraduationCap className="w-5 h-5" />
                     <span className="font-medium">Learning Modules</span>
                     {learningModules.length > 0 && (
                       <span className="ml-auto text-xs bg-indigo-200 text-indigo-800 px-2 py-0.5 rounded-full">
@@ -1257,11 +1257,11 @@ export default function TaiwaneseTranslator() {
                       setActiveSection('vocabulary');
                       setShowMoreMenu(false);
                     }}
-                    className={`w-full flex items-center gap-2 px-4 py-2 hover:bg-gray-100 transition-colors ${
+                    className={`w-full flex items-center gap-2 px-4 py-3 hover:bg-gray-100 transition-colors text-left ${
                       activeSection === 'vocabulary' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-700'
                     }`}
                   >
-                    <BookMarked className="w-4 h-4" />
+                    <BookMarked className="w-5 h-5" />
                     <span className="font-medium">Vocabulary Lists</span>
                   </button>
                   <button
@@ -1269,11 +1269,11 @@ export default function TaiwaneseTranslator() {
                       setActiveSection('phrases');
                       setShowMoreMenu(false);
                     }}
-                    className={`w-full flex items-center gap-2 px-4 py-2 hover:bg-gray-100 transition-colors ${
+                    className={`w-full flex items-center gap-2 px-4 py-3 hover:bg-gray-100 transition-colors text-left ${
                       activeSection === 'phrases' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-700'
                     }`}
                   >
-                    <MessageSquare className="w-4 h-4" />
+                    <MessageSquare className="w-5 h-5" />
                     <span className="font-medium">Common Phrases</span>
                   </button>
                 </div>
@@ -1286,49 +1286,51 @@ export default function TaiwaneseTranslator() {
         {activeSection === 'translator' && (
         <div className="bg-white rounded-lg shadow-xl overflow-hidden">
           {/* Language Selector */}
-          <div className="bg-gray-50 p-4 border-b flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <label className="text-sm text-gray-600">From:</label>
-              <select
-                value={sourceLanguage}
-                onChange={(e) => {
-                  setSourceLanguage(e.target.value);
-                  setInputText('');
-                  setTranslatedText('');
-                  setMandarinText('');
-                  setPinyin('');
-                  setRomanization('');
-                  setHanCharacters('');
-                }}
-                className="px-3 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          <div className="bg-gray-50 p-3 md:p-4 border-b">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-center gap-2 md:gap-4">
+                <label className="text-xs md:text-sm text-gray-600 whitespace-nowrap">From:</label>
+                <select
+                  value={sourceLanguage}
+                  onChange={(e) => {
+                    setSourceLanguage(e.target.value);
+                    setInputText('');
+                    setTranslatedText('');
+                    setMandarinText('');
+                    setPinyin('');
+                    setRomanization('');
+                    setHanCharacters('');
+                  }}
+                  className="flex-1 sm:flex-none px-2 md:px-3 py-1.5 md:py-2 border border-gray-300 rounded-lg font-medium text-sm md:text-base text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                >
+                  <option value="english">English</option>
+                  <option value="mandarin">Mandarin (中文)</option>
+                  <option value="taiwanese">Taiwanese (台語)</option>
+                </select>
+              </div>
+
+              <button
+                onClick={swapLanguages}
+                className="p-2 hover:bg-gray-200 rounded-full transition-colors self-center"
+                title="Switch language"
               >
-                <option value="english">English</option>
-                <option value="mandarin">Mandarin (中文)</option>
-                <option value="taiwanese">Taiwanese (台語)</option>
-              </select>
-            </div>
+                <ArrowLeftRight className="w-5 h-5 text-gray-600" />
+              </button>
 
-            <button
-              onClick={swapLanguages}
-              className="p-2 hover:bg-gray-200 rounded-full transition-colors"
-              title="Switch language"
-            >
-              <ArrowLeftRight className="w-5 h-5 text-gray-600" />
-            </button>
-
-            <div className="flex items-center gap-4">
-              <label className="text-sm text-gray-600">To:</label>
-              <span className="font-medium text-gray-700 px-3 py-2">
-                {sourceLanguage === 'taiwanese' ? 'English' : 'Taiwanese (台語)'}
-              </span>
+              <div className="flex items-center gap-2 md:gap-4">
+                <label className="text-xs md:text-sm text-gray-600 whitespace-nowrap">To:</label>
+                <span className="font-medium text-sm md:text-base text-gray-700 px-2 md:px-3 py-1.5 md:py-2">
+                  {sourceLanguage === 'taiwanese' ? 'English' : 'Taiwanese (台語)'}
+                </span>
+              </div>
             </div>
           </div>
 
           {/* Translation Layout - changes based on direction */}
-          <div className={`grid ${sourceLanguage === 'english' ? 'md:grid-cols-3' : 'md:grid-cols-2'} divide-x`}>
+          <div className={`grid ${sourceLanguage === 'english' ? 'md:grid-cols-3' : 'md:grid-cols-2'} md:divide-x divide-y md:divide-y-0`}>
             {/* Input Column */}
-            <div className={`p-6 ${sourceLanguage === 'mandarin' ? 'bg-amber-50' : ''}`}>
-              <h3 className={`text-sm font-medium mb-2 ${sourceLanguage === 'mandarin' ? 'text-amber-700' : 'text-gray-700'}`}>
+            <div className={`p-4 md:p-6 ${sourceLanguage === 'mandarin' ? 'bg-amber-50' : ''}`}>
+              <h3 className={`text-sm md:text-base font-medium mb-2 ${sourceLanguage === 'mandarin' ? 'text-amber-700' : 'text-gray-700'}`}>
                 {sourceLanguage === 'english' ? 'English Input' : sourceLanguage === 'mandarin' ? 'Mandarin Input (中文)' : 'Taiwanese Input'}
               </h3>
               <div className="mb-4">
@@ -1336,7 +1338,7 @@ export default function TaiwaneseTranslator() {
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   placeholder={`Enter ${sourceLanguage === 'english' ? 'English' : sourceLanguage === 'mandarin' ? 'Mandarin' : 'Taiwanese'} text...`}
-                  className="w-full h-32 p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                  className="w-full h-28 md:h-32 p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm md:text-base"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && e.ctrlKey) {
                       debouncedTranslate();
@@ -1348,7 +1350,7 @@ export default function TaiwaneseTranslator() {
               <button
                 onClick={debouncedTranslate}
                 disabled={isLoading || !inputText.trim()}
-                className="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 text-sm"
+                className="w-full bg-indigo-600 text-white py-2.5 md:py-2 px-4 rounded-lg font-medium hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 text-sm md:text-base"
               >
                 {isLoading ? (
                   <>
@@ -2296,18 +2298,18 @@ export default function TaiwaneseTranslator() {
             {!selectedLesson ? (
               /* Units Page */
               <div className="bg-white rounded-lg shadow-xl overflow-hidden">
-                <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white">
-                  <h2 className="text-2xl font-bold mb-2">Taiwanese Learning Curriculum</h2>
-                  <p className="text-indigo-100">Choose a unit and lesson to begin your learning journey</p>
+                <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-4 md:p-6 text-white">
+                  <h2 className="text-xl md:text-2xl font-bold mb-2">Taiwanese Learning Curriculum</h2>
+                  <p className="text-sm md:text-base text-indigo-100">Choose a unit and lesson to begin your learning journey</p>
                 </div>
 
-                <div className="p-6 space-y-6">
+                <div className="p-4 md:p-6 space-y-4 md:space-y-6">
                   {/* Unit 1 */}
                   <div className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
-                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 border-b border-gray-200">
-                      <h3 className="text-lg font-bold text-indigo-900">Unit 1: Greetings and Basic Politeness</h3>
-                      <p className="text-sm text-indigo-700 mt-1">Learn essential greetings and polite expressions</p>
-                      <div className="flex items-center gap-4 mt-2 text-xs text-indigo-600">
+                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-3 md:p-4 border-b border-gray-200">
+                      <h3 className="text-base md:text-lg font-bold text-indigo-900">Unit 1: Greetings and Basic Politeness</h3>
+                      <p className="text-xs md:text-sm text-indigo-700 mt-1">Learn essential greetings and polite expressions</p>
+                      <div className="flex items-center gap-3 md:gap-4 mt-2 text-xs text-indigo-600">
                         <span className="flex items-center gap-1">
                           <BookOpen className="w-3 h-3" />
                           Beginner
@@ -2315,24 +2317,24 @@ export default function TaiwaneseTranslator() {
                         <span>3-4 lessons</span>
                       </div>
                     </div>
-                    <div className="p-4 bg-white">
-                      <h4 className="text-sm font-semibold text-gray-700 mb-3">Lessons:</h4>
+                    <div className="p-3 md:p-4 bg-white">
+                      <h4 className="text-xs md:text-sm font-semibold text-gray-700 mb-2 md:mb-3">Lessons:</h4>
                       <div className="space-y-2">
                         <button
                           onClick={() => setSelectedLesson('unit-01')}
-                          className="w-full text-left px-4 py-3 rounded-md bg-gray-50 hover:bg-indigo-50 hover:border-indigo-200 border border-gray-200 transition-all group"
+                          className="w-full text-left px-3 md:px-4 py-3 rounded-md bg-gray-50 hover:bg-indigo-50 active:bg-indigo-100 hover:border-indigo-200 border border-gray-200 transition-all group"
                         >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
+                              <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold flex-shrink-0">
                                 1
                               </div>
-                              <div>
-                                <div className="font-medium text-gray-900 group-hover:text-indigo-600">Lesson 1: Greetings and Basic Politeness</div>
-                                <div className="text-xs text-gray-500">Learn how to greet people and use polite expressions</div>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-sm md:text-base text-gray-900 group-hover:text-indigo-600 truncate sm:whitespace-normal">Lesson 1: Greetings and Basic Politeness</div>
+                                <div className="text-xs text-gray-500 hidden sm:block">Learn how to greet people and use polite expressions</div>
                               </div>
                             </div>
-                            <ChevronDown className="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transform -rotate-90" />
+                            <ChevronDown className="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transform -rotate-90 flex-shrink-0" />
                           </div>
                         </button>
                       </div>
@@ -2351,9 +2353,9 @@ export default function TaiwaneseTranslator() {
               <div>
                 <button
                   onClick={() => setSelectedLesson(null)}
-                  className="mb-4 flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium"
+                  className="mb-3 md:mb-4 flex items-center gap-2 text-indigo-600 hover:text-indigo-700 active:text-indigo-800 font-medium py-2 px-1 text-sm md:text-base"
                 >
-                  <ChevronDown className="w-4 h-4 transform rotate-90" />
+                  <ChevronDown className="w-4 h-4 md:w-5 md:h-5 transform rotate-90" />
                   Back to Units
                 </button>
                 <LessonViewer lessonId={selectedLesson} />
