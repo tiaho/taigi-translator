@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ArrowLeftRight, Volume2, BookOpen, Loader2, Languages, Library, Home, CreditCard, GraduationCap, BookMarked, MessageSquare, ChevronDown, MoreHorizontal, Trophy, CheckCircle, XCircle, RotateCcw, BarChart3, TrendingUp, Flame, Calendar, Award, Target } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ArrowLeftRight, Volume2, BookOpen, Loader2, Languages, Library, Home, CreditCard, GraduationCap, BookMarked, MessageSquare, ChevronDown, MoreHorizontal, Trophy, CheckCircle, XCircle, RotateCcw, BarChart3, TrendingUp, Flame, Calendar, Award, Target, Timer, Clock, Play, Pause, Square } from 'lucide-react';
 import LessonViewer from './components/LessonViewer';
 import SentenceBuilder from './components/SentenceBuilder';
 
@@ -161,6 +161,20 @@ export default function TaiwaneseTranslator() {
       };
     }
   });
+
+  // Study Session Timer state
+  const [studyTimer, setStudyTimer] = useState({
+    isActive: false,
+    isPaused: false,
+    duration: 0, // in seconds
+    timeRemaining: 0, // in seconds
+    startTime: null,
+    activityType: null, // 'flashcards', 'quiz', 'lessons', 'free'
+    cardsReviewed: 0,
+    quizzesTaken: 0
+  });
+  const [customTimerInput, setCustomTimerInput] = useState('');
+  const timerIntervalRef = useRef(null);
 
   const audioRef = React.useRef(null);
   const debounceTimerRef = React.useRef(null);
@@ -504,6 +518,142 @@ export default function TaiwaneseTranslator() {
     setCurrentExerciseIndex(0);
     setShowBreakdown(false);
   };
+
+  // Study Session Timer functions
+  const startStudySession = (durationMinutes, activityType = 'free') => {
+    const durationSeconds = durationMinutes * 60;
+    setStudyTimer({
+      isActive: true,
+      isPaused: false,
+      duration: durationSeconds,
+      timeRemaining: durationSeconds,
+      startTime: new Date(),
+      activityType,
+      cardsReviewed: 0,
+      quizzesTaken: 0
+    });
+    setCustomTimerInput(''); // Reset custom input after starting
+  };
+
+  const startCustomStudySession = () => {
+    const duration = parseInt(customTimerInput);
+    if (isNaN(duration) || duration <= 0 || duration > 180) {
+      alert('Please enter a valid duration between 1 and 180 minutes');
+      return;
+    }
+    startStudySession(duration, 'free');
+  };
+
+  const pauseStudySession = () => {
+    setStudyTimer(prev => ({ ...prev, isPaused: true }));
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+  };
+
+  const resumeStudySession = () => {
+    setStudyTimer(prev => ({ ...prev, isPaused: false }));
+  };
+
+  const stopStudySession = () => {
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+
+    // Record the study session in statistics
+    if (studyTimer.startTime) {
+      const sessionDuration = Math.ceil((studyTimer.duration - studyTimer.timeRemaining) / 60); // in minutes
+      if (sessionDuration > 0) {
+        const today = new Date().toISOString().split('T')[0];
+
+        setStatistics(prevStats => {
+          const newStats = { ...prevStats };
+
+          // Update study sessions
+          newStats.studySessions = newStats.studySessions || {
+            lastStudyDate: null,
+            currentStreak: 0,
+            longestStreak: 0,
+            totalSessions: 0,
+            sessionHistory: []
+          };
+
+          newStats.studySessions.totalSessions += 1;
+          newStats.studySessions.lastStudyDate = today;
+          newStats.studySessions.sessionHistory.push({
+            date: today,
+            duration: sessionDuration,
+            activityType: studyTimer.activityType,
+            cardsReviewed: studyTimer.cardsReviewed,
+            quizzesTaken: studyTimer.quizzesTaken
+          });
+
+          // Update total time studied
+          newStats.overall = newStats.overall || { firstUsedDate: new Date().toISOString(), totalTimeStudied: 0 };
+          newStats.overall.totalTimeStudied += sessionDuration;
+
+          // Update streak
+          updateStudyStreak(newStats, today);
+
+          saveStatistics(newStats);
+          return newStats;
+        });
+      }
+    }
+
+    // Reset timer
+    setStudyTimer({
+      isActive: false,
+      isPaused: false,
+      duration: 0,
+      timeRemaining: 0,
+      startTime: null,
+      activityType: null,
+      cardsReviewed: 0,
+      quizzesTaken: 0
+    });
+  };
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Timer countdown effect
+  useEffect(() => {
+    if (studyTimer.isActive && !studyTimer.isPaused && studyTimer.timeRemaining > 0) {
+      timerIntervalRef.current = setInterval(() => {
+        setStudyTimer(prev => {
+          const newTimeRemaining = prev.timeRemaining - 1;
+
+          // Timer completed
+          if (newTimeRemaining <= 0) {
+            if (timerIntervalRef.current) {
+              clearInterval(timerIntervalRef.current);
+              timerIntervalRef.current = null;
+            }
+
+            // Play completion sound (optional - could add audio notification)
+            // Show completion notification
+            alert('Study session complete! Great work!');
+
+            return { ...prev, timeRemaining: 0, isPaused: true };
+          }
+
+          return { ...prev, timeRemaining: newTimeRemaining };
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
+    };
+  }, [studyTimer.isActive, studyTimer.isPaused, studyTimer.timeRemaining]);
 
   const commonPhrases = [
     { en: 'Hello', taiwanese: 'Lí hó', han: '你好', tailo: 'Lí hó', pronunciation: 'LEE hoh' },
@@ -1894,6 +2044,17 @@ export default function TaiwaneseTranslator() {
               )}
             </button>
             <button
+              onClick={() => setActiveSection('study')}
+              className={`flex items-center gap-1 md:gap-2 px-2 md:px-4 py-2 md:py-2 rounded-md transition-all ${
+                activeSection === 'study'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <Clock className="w-5 h-5 md:w-4 md:h-4" />
+              <span className="font-medium text-xs md:text-base hidden sm:inline">Study</span>
+            </button>
+            <button
               onClick={() => {
                 setActiveSection('quiz');
                 setQuizMode(null);
@@ -3247,6 +3408,250 @@ export default function TaiwaneseTranslator() {
         </div>
         )}
 
+        {/* Study Session Timer */}
+        {activeSection === 'study' && (
+          <div className="mt-4 md:mt-6">
+            <div className="bg-white rounded-lg shadow-xl overflow-hidden">
+              <div className="bg-gradient-to-r from-green-600 to-teal-600 p-4 md:p-6 text-white">
+                <div className="flex items-center gap-3 mb-2">
+                  <Clock className="w-8 h-8 md:w-10 md:h-10" />
+                  <h2 className="text-xl md:text-2xl font-bold">Study Session Timer</h2>
+                </div>
+                <p className="text-sm md:text-base text-green-100">Focus your learning with timed study sessions</p>
+              </div>
+
+              <div className="p-4 md:p-6">
+                {!studyTimer.isActive ? (
+                  /* Timer Setup */
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-800 mb-4">Choose Study Duration</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                        <button
+                          onClick={() => startStudySession(15)}
+                          className="bg-gradient-to-br from-green-500 to-green-600 text-white p-4 rounded-lg hover:from-green-600 hover:to-green-700 transition-all shadow-md hover:shadow-lg"
+                        >
+                          <Timer className="w-6 h-6 mx-auto mb-2" />
+                          <div className="text-2xl font-bold">15</div>
+                          <div className="text-sm">minutes</div>
+                        </button>
+                        <button
+                          onClick={() => startStudySession(30)}
+                          className="bg-gradient-to-br from-teal-500 to-teal-600 text-white p-4 rounded-lg hover:from-teal-600 hover:to-teal-700 transition-all shadow-md hover:shadow-lg"
+                        >
+                          <Timer className="w-6 h-6 mx-auto mb-2" />
+                          <div className="text-2xl font-bold">30</div>
+                          <div className="text-sm">minutes</div>
+                        </button>
+                        <button
+                          onClick={() => startStudySession(45)}
+                          className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-4 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all shadow-md hover:shadow-lg"
+                        >
+                          <Timer className="w-6 h-6 mx-auto mb-2" />
+                          <div className="text-2xl font-bold">45</div>
+                          <div className="text-sm">minutes</div>
+                        </button>
+                        <button
+                          onClick={() => startStudySession(60)}
+                          className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-4 rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all shadow-md hover:shadow-lg"
+                        >
+                          <Timer className="w-6 h-6 mx-auto mb-2" />
+                          <div className="text-2xl font-bold">60</div>
+                          <div className="text-sm">minutes</div>
+                        </button>
+                        {/* Custom Time Input */}
+                        <div className="bg-white border-2 border-gray-300 p-2 rounded-lg flex flex-col justify-center gap-2">
+                          <input
+                            type="number"
+                            min="1"
+                            max="180"
+                            value={customTimerInput}
+                            onChange={(e) => setCustomTimerInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                startCustomStudySession();
+                              }
+                            }}
+                            placeholder="Custom"
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-center focus:outline-none focus:border-indigo-500 text-lg font-bold"
+                          />
+                          <button
+                            onClick={startCustomStudySession}
+                            disabled={!customTimerInput}
+                            className="bg-indigo-600 text-white px-3 py-1.5 rounded hover:bg-indigo-700 transition-all disabled:bg-gray-300 disabled:cursor-not-allowed text-sm font-medium"
+                          >
+                            Start
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-800 mb-4">Study Activity (Optional)</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <button
+                          onClick={() => {
+                            startStudySession(30, 'flashcards');
+                            setActiveSection('flashcards');
+                          }}
+                          className="bg-white border-2 border-purple-200 p-4 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition-all"
+                        >
+                          <CreditCard className="w-6 h-6 mx-auto mb-2 text-purple-600" />
+                          <div className="text-sm font-medium text-gray-800">Flashcards</div>
+                        </button>
+                        <button
+                          onClick={() => {
+                            startStudySession(30, 'quiz');
+                            setActiveSection('quiz');
+                          }}
+                          className="bg-white border-2 border-amber-200 p-4 rounded-lg hover:border-amber-400 hover:bg-amber-50 transition-all"
+                        >
+                          <Trophy className="w-6 h-6 mx-auto mb-2 text-amber-600" />
+                          <div className="text-sm font-medium text-gray-800">Quiz</div>
+                        </button>
+                        <button
+                          onClick={() => {
+                            startStudySession(30, 'lessons');
+                            setActiveSection('lessons');
+                          }}
+                          className="bg-white border-2 border-blue-200 p-4 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all"
+                        >
+                          <BookOpen className="w-6 h-6 mx-auto mb-2 text-blue-600" />
+                          <div className="text-sm font-medium text-gray-800">Lessons</div>
+                        </button>
+                        <button
+                          onClick={() => startStudySession(30, 'free')}
+                          className="bg-white border-2 border-gray-200 p-4 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all"
+                        >
+                          <Languages className="w-6 h-6 mx-auto mb-2 text-gray-600" />
+                          <div className="text-sm font-medium text-gray-800">Free Study</div>
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-3 text-center">
+                        Select an activity to start a 30-minute session, or choose a duration above for free study
+                      </p>
+                    </div>
+
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-green-800 mb-2 flex items-center gap-2">
+                        <Flame className="w-5 h-5" />
+                        Your Study Stats
+                      </h4>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                        <div>
+                          <div className="text-2xl font-bold text-green-600">
+                            {statistics.studySessions?.totalSessions || 0}
+                          </div>
+                          <div className="text-xs text-gray-600">Total Sessions</div>
+                        </div>
+                        <div>
+                          <div className="text-2xl font-bold text-green-600">
+                            {statistics.studySessions?.currentStreak || 0}
+                          </div>
+                          <div className="text-xs text-gray-600">Day Streak</div>
+                        </div>
+                        <div>
+                          <div className="text-2xl font-bold text-green-600">
+                            {statistics.overall?.totalTimeStudied || 0}
+                          </div>
+                          <div className="text-xs text-gray-600">Minutes Studied</div>
+                        </div>
+                        <div>
+                          <div className="text-2xl font-bold text-green-600">
+                            {statistics.studySessions?.longestStreak || 0}
+                          </div>
+                          <div className="text-xs text-gray-600">Longest Streak</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* Active Timer */
+                  <div className="space-y-6">
+                    <div className="text-center">
+                      <div className="inline-flex items-center justify-center w-48 h-48 md:w-64 md:h-64 rounded-full bg-gradient-to-br from-green-100 to-teal-100 border-8 border-green-500 mb-6">
+                        <div>
+                          <div className="text-5xl md:text-7xl font-bold text-green-700">
+                            {formatTime(studyTimer.timeRemaining)}
+                          </div>
+                          <div className="text-sm md:text-base text-green-600 mt-2">
+                            {studyTimer.activityType === 'flashcards' && 'Flashcard Study'}
+                            {studyTimer.activityType === 'quiz' && 'Quiz Practice'}
+                            {studyTimer.activityType === 'lessons' && 'Lesson Study'}
+                            {studyTimer.activityType === 'free' && 'Free Study'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div className="w-full bg-gray-200 rounded-full h-3 mb-6">
+                        <div
+                          className="bg-gradient-to-r from-green-500 to-teal-500 h-3 rounded-full transition-all duration-1000"
+                          style={{
+                            width: `${((studyTimer.duration - studyTimer.timeRemaining) / studyTimer.duration) * 100}%`
+                          }}
+                        ></div>
+                      </div>
+
+                      {/* Timer Controls */}
+                      <div className="flex gap-3 justify-center mb-6">
+                        {!studyTimer.isPaused ? (
+                          <button
+                            onClick={pauseStudySession}
+                            className="flex items-center gap-2 bg-yellow-500 text-white px-6 py-3 rounded-lg hover:bg-yellow-600 transition-all shadow-md hover:shadow-lg font-medium"
+                          >
+                            <Pause className="w-5 h-5" />
+                            Pause
+                          </button>
+                        ) : (
+                          <button
+                            onClick={resumeStudySession}
+                            className="flex items-center gap-2 bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition-all shadow-md hover:shadow-lg font-medium"
+                          >
+                            <Play className="w-5 h-5" />
+                            Resume
+                          </button>
+                        )}
+                        <button
+                          onClick={stopStudySession}
+                          className="flex items-center gap-2 bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600 transition-all shadow-md hover:shadow-lg font-medium"
+                        >
+                          <Square className="w-5 h-5" />
+                          End Session
+                        </button>
+                      </div>
+
+                      {/* Session Info */}
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <div className="grid grid-cols-3 gap-4 text-center">
+                          <div>
+                            <div className="text-2xl font-bold text-gray-700">
+                              {Math.floor((studyTimer.duration - studyTimer.timeRemaining) / 60)}
+                            </div>
+                            <div className="text-xs text-gray-600">Minutes Studied</div>
+                          </div>
+                          <div>
+                            <div className="text-2xl font-bold text-gray-700">
+                              {studyTimer.cardsReviewed}
+                            </div>
+                            <div className="text-xs text-gray-600">Cards Reviewed</div>
+                          </div>
+                          <div>
+                            <div className="text-2xl font-bold text-gray-700">
+                              {studyTimer.quizzesTaken}
+                            </div>
+                            <div className="text-xs text-gray-600">Quizzes Taken</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Quiz Section */}
         {activeSection === 'quiz' && (
           <div className="mt-4 md:mt-6">
@@ -3898,14 +4303,14 @@ export default function TaiwaneseTranslator() {
                           <BookOpen className="w-3 h-3" />
                           Beginner
                         </span>
-                        <span>3-4 lessons</span>
+                        <span>4 lessons</span>
                       </div>
                     </div>
                     <div className="p-3 md:p-4 bg-white">
                       <h4 className="text-xs md:text-sm font-semibold text-gray-700 mb-2 md:mb-3">Lessons:</h4>
                       <div className="space-y-2">
                         <button
-                          onClick={() => setSelectedLesson('unit-01')}
+                          onClick={() => setSelectedLesson('unit-01-lesson-01')}
                           className="w-full text-left px-3 md:px-4 py-3 rounded-md bg-gray-50 hover:bg-indigo-50 active:bg-indigo-100 hover:border-indigo-200 border border-gray-200 transition-all group"
                         >
                           <div className="flex items-center justify-between gap-2">
@@ -3914,8 +4319,59 @@ export default function TaiwaneseTranslator() {
                                 1
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className="font-medium text-sm md:text-base text-gray-900 group-hover:text-indigo-600 truncate sm:whitespace-normal">Lesson 1: Greetings and Basic Politeness</div>
-                                <div className="text-xs text-gray-500 hidden sm:block">Learn how to greet people and use polite expressions</div>
+                                <div className="font-medium text-sm md:text-base text-gray-900 group-hover:text-indigo-600 truncate sm:whitespace-normal">Basics: Greetings & Introductions</div>
+                                <div className="text-xs text-gray-500 hidden sm:block">Essential greetings, introductions, and politeness basics</div>
+                              </div>
+                            </div>
+                            <ChevronDown className="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transform -rotate-90 flex-shrink-0" />
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => setSelectedLesson('unit-01-lesson-02')}
+                          className="w-full text-left px-3 md:px-4 py-3 rounded-md bg-gray-50 hover:bg-indigo-50 active:bg-indigo-100 hover:border-indigo-200 border border-gray-200 transition-all group"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
+                              <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                                2
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-sm md:text-base text-gray-900 group-hover:text-indigo-600 truncate sm:whitespace-normal">Wellbeing & Small Talk</div>
+                                <div className="text-xs text-gray-500 hidden sm:block">How are you, checking in, making small talk</div>
+                              </div>
+                            </div>
+                            <ChevronDown className="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transform -rotate-90 flex-shrink-0" />
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => setSelectedLesson('unit-01-lesson-03')}
+                          className="w-full text-left px-3 md:px-4 py-3 rounded-md bg-gray-50 hover:bg-indigo-50 active:bg-indigo-100 hover:border-indigo-200 border border-gray-200 transition-all group"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
+                              <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                                3
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-sm md:text-base text-gray-900 group-hover:text-indigo-600 truncate sm:whitespace-normal">Requests & Offers</div>
+                                <div className="text-xs text-gray-500 hidden sm:block">Making requests, offering help, asking permission</div>
+                              </div>
+                            </div>
+                            <ChevronDown className="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transform -rotate-90 flex-shrink-0" />
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => setSelectedLesson('unit-01-lesson-04')}
+                          className="w-full text-left px-3 md:px-4 py-3 rounded-md bg-gray-50 hover:bg-indigo-50 active:bg-indigo-100 hover:border-indigo-200 border border-gray-200 transition-all group"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
+                              <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                                4
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-sm md:text-base text-gray-900 group-hover:text-indigo-600 truncate sm:whitespace-normal">Compliments & Gratitude</div>
+                                <div className="text-xs text-gray-500 hidden sm:block">Giving compliments, expressing gratitude, formal/informal</div>
                               </div>
                             </div>
                             <ChevronDown className="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transform -rotate-90 flex-shrink-0" />
@@ -3925,10 +4381,47 @@ export default function TaiwaneseTranslator() {
                     </div>
                   </div>
 
+                  {/* Unit 2 */}
+                  <div className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+                    <div className="bg-gradient-to-r from-green-50 to-teal-50 p-3 md:p-4 border-b border-gray-200">
+                      <h3 className="text-base md:text-lg font-bold text-green-900">Unit 2: Numbers and Counting</h3>
+                      <p className="text-xs md:text-sm text-green-700 mt-1">Master numbers, time, and shopping</p>
+                      <div className="flex items-center gap-3 md:gap-4 mt-2 text-xs text-green-600">
+                        <span className="flex items-center gap-1">
+                          <BookOpen className="w-3 h-3" />
+                          Beginner
+                        </span>
+                        <span>3-4 lessons</span>
+                      </div>
+                    </div>
+                    <div className="p-3 md:p-4 bg-white">
+                      <h4 className="text-xs md:text-sm font-semibold text-gray-700 mb-2 md:mb-3">Lessons:</h4>
+                      <div className="space-y-2">
+                        <button
+                          onClick={() => setSelectedLesson('unit-02-lesson-01')}
+                          className="w-full text-left px-3 md:px-4 py-3 rounded-md bg-gray-50 hover:bg-green-50 active:bg-green-100 hover:border-green-200 border border-gray-200 transition-all group"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
+                              <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                                1
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-sm md:text-base text-gray-900 group-hover:text-green-600 truncate sm:whitespace-normal">Numbers and Counting</div>
+                                <div className="text-xs text-gray-500 hidden sm:block">Numbers 0-10,000, time, prices, and shopping</div>
+                              </div>
+                            </div>
+                            <ChevronDown className="w-5 h-5 text-gray-400 group-hover:text-green-600 transform -rotate-90 flex-shrink-0" />
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Placeholder for future units */}
                   <div className="border border-dashed border-gray-300 rounded-lg p-6 text-center text-gray-400">
                     <BookOpen className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">More units coming soon...</p>
+                    <p className="text-sm">More units and lessons coming soon...</p>
                   </div>
                 </div>
               </div>
