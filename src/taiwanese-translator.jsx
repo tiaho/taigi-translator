@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeftRight, Volume2, BookOpen, Loader2, Languages, Library, Home, CreditCard, GraduationCap, BookMarked, MessageSquare, ChevronDown, MoreHorizontal, Trophy, CheckCircle, XCircle, RotateCcw, BarChart3, TrendingUp, Flame, Calendar, Award, Target } from 'lucide-react';
 import LessonViewer from './components/LessonViewer';
+import SentenceBuilder from './components/SentenceBuilder';
 
 export default function TaiwaneseTranslator() {
   const [inputText, setInputText] = useState('');
@@ -57,7 +58,7 @@ export default function TaiwaneseTranslator() {
   const [pronunciationGuide, setPronunciationGuide] = useState('');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [audioError, setAudioError] = useState('');
-  const [activeSection, setActiveSection] = useState('translator'); // 'translator', 'lessons', 'flashcards', 'quiz', 'modules', 'vocabulary', 'phrases', 'tonesandhi'
+  const [activeSection, setActiveSection] = useState('translator'); // 'translator', 'lessons', 'flashcards', 'quiz', 'modules', 'vocabulary', 'phrases', 'tonesandhi', 'sentencebuilder'
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [selectedLesson, setSelectedLesson] = useState(null); // null = show units page, lesson ID = show lesson
 
@@ -1992,6 +1993,20 @@ export default function TaiwaneseTranslator() {
                     <TrendingUp className="w-5 h-5" />
                     <span className="font-medium">Tone Sandhi Trainer</span>
                   </button>
+
+                  {/* Sentence Builder */}
+                  <button
+                    onClick={() => {
+                      setActiveSection('sentencebuilder');
+                      setShowMoreMenu(false);
+                    }}
+                    className={`w-full flex items-center gap-2 px-4 py-3 hover:bg-gray-100 transition-colors text-left ${
+                      activeSection === 'sentencebuilder' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-700'
+                    }`}
+                  >
+                    <Target className="w-5 h-5" />
+                    <span className="font-medium">Sentence Builder</span>
+                  </button>
                 </div>
               )}
             </div>
@@ -2668,6 +2683,13 @@ export default function TaiwaneseTranslator() {
               </div>
           </div>
         </div>
+        )}
+
+        {/* Sentence Builder Section */}
+        {activeSection === 'sentencebuilder' && (
+          <div className="mt-6">
+            <SentenceBuilder />
+          </div>
         )}
 
         {/* Flashcards Section */}
